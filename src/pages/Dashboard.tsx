@@ -11,7 +11,6 @@ import { HistoricalDashboard } from '@/components/dashboard/HistoricalDashboard'
 import { SimpleReports } from '@/components/dashboard/SimpleReports';
 import { PredictionsReports } from '@/components/dashboard/PredictionsReports';
 import { ReportsSection } from '@/components/dashboard/ReportsSection';
-import { RealisticEuropeMap } from '@/components/dashboard/RealisticEuropeMap';
 
 export const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -36,8 +35,8 @@ export const Dashboard = () => {
   const renderSectionContent = () => {
     switch (activeSection) {
       case 'dashboard':
-        // Dashboard con el nuevo mapa realista de Europa
-        return <RealisticEuropeMap />;
+        // Dashboard con gráficos originales
+        return <SimpleReports />;
       case 'reports':
         // Nueva sección de reportes con PDFs y descargas CSV
         return <ReportsSection />;
@@ -45,7 +44,7 @@ export const Dashboard = () => {
         // Predicciones y mapa interactivo
         return <PredictionsReports />;
       default:
-        return <RealisticEuropeMap />;
+        return <SimpleReports />;
     }
   };
 
