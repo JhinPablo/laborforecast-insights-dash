@@ -263,9 +263,9 @@ export const EuropeVectorMap = () => {
             </div>
           </div>
 
-          {/* Europe Vector Map */}
+          {/* Europe Vector Map - Made Larger */}
           <div className="relative bg-gradient-to-br from-blue-50 via-white to-green-50 rounded-lg overflow-hidden border-2 border-blue-200">
-            <svg viewBox="0 0 1000 600" className="w-full h-96">
+            <svg viewBox="0 0 1000 600" className="w-full h-[600px]">
               {/* Germany */}
               <path
                 d="M520 280 L540 270 L560 280 L565 300 L555 320 L535 325 L515 315 L510 295 Z"
@@ -486,6 +486,86 @@ export const EuropeVectorMap = () => {
                 onClick={() => setSelectedCountry(selectedCountry === 'Cyprus' ? null : 'Cyprus')}
               />
 
+              {/* Estonia */}
+              <path
+                d="M590 130 L610 125 L620 145 L610 160 L595 155 L585 140 Z"
+                fill={getCountryColor('Estonia')}
+                stroke="#fff"
+                strokeWidth="1"
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setSelectedCountry(selectedCountry === 'Estonia' ? null : 'Estonia')}
+              />
+
+              {/* Latvia */}
+              <path
+                d="M590 160 L610 155 L620 175 L610 190 L595 185 L585 170 Z"
+                fill={getCountryColor('Latvia')}
+                stroke="#fff"
+                strokeWidth="1"
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setSelectedCountry(selectedCountry === 'Latvia' ? null : 'Latvia')}
+              />
+
+              {/* Lithuania */}
+              <path
+                d="M570 190 L590 185 L600 205 L590 220 L575 215 L565 200 Z"
+                fill={getCountryColor('Lithuania')}
+                stroke="#fff"
+                strokeWidth="1"
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setSelectedCountry(selectedCountry === 'Lithuania' ? null : 'Lithuania')}
+              />
+
+              {/* Slovakia */}
+              <path
+                d="M575 300 L595 295 L600 310 L585 315 L570 310 Z"
+                fill={getCountryColor('Slovakia')}
+                stroke="#fff"
+                strokeWidth="1"
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setSelectedCountry(selectedCountry === 'Slovakia' ? null : 'Slovakia')}
+              />
+
+              {/* Slovenia */}
+              <path
+                d="M540 330 L555 325 L560 340 L545 345 L535 340 Z"
+                fill={getCountryColor('Slovenia')}
+                stroke="#fff"
+                strokeWidth="1"
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setSelectedCountry(selectedCountry === 'Slovenia' ? null : 'Slovenia')}
+              />
+
+              {/* Malta */}
+              <path
+                d="M545 450 L560 445 L565 460 L550 465 L540 460 Z"
+                fill={getCountryColor('Malta')}
+                stroke="#fff"
+                strokeWidth="1"
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setSelectedCountry(selectedCountry === 'Malta' ? null : 'Malta')}
+              />
+
+              {/* Luxembourg */}
+              <path
+                d="M510 295 L520 290 L525 305 L515 310 L505 305 Z"
+                fill={getCountryColor('Luxembourg')}
+                stroke="#fff"
+                strokeWidth="1"
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setSelectedCountry(selectedCountry === 'Luxembourg' ? null : 'Luxembourg')}
+              />
+
+              {/* Croatia */}
+              <path
+                d="M570 340 L590 335 L595 355 L580 360 L565 355 Z"
+                fill={getCountryColor('Croatia')}
+                stroke="#fff"
+                strokeWidth="1"
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setSelectedCountry(selectedCountry === 'Croatia' ? null : 'Croatia')}
+              />
+
               {/* Country labels */}
               <text x="530" y="295" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">DE</text>
               <text x="490" y="335" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">FR</text>
@@ -501,6 +581,14 @@ export const EuropeVectorMap = () => {
               <text x="512" y="265" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">NL</text>
               <text x="502" y="282" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">BE</text>
               <text x="705" y="375" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">CY</text>
+              <text x="600" y="145" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">EE</text>
+              <text x="600" y="175" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">LV</text>
+              <text x="580" y="205" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">LT</text>
+              <text x="585" y="305" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">SK</text>
+              <text x="548" y="340" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">SI</text>
+              <text x="552" y="455" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">MT</text>
+              <text x="515" y="300" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">LU</text>
+              <text x="580" y="350" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">HR</text>
             </svg>
 
             {/* Enhanced Map Legend */}
