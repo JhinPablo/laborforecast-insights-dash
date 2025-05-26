@@ -160,6 +160,13 @@ export const HistoricalDashboard = () => {
   const ageDistribution = getAgeDistribution();
 
   const COLORS = ['#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6'];
+  
+  // Gender-specific colors: Blue for men, Pink for women
+  const getGenderColor = (sex: string, index: number) => {
+    if (sex === 'Hombres') return '#3B82F6'; // Blue for men
+    if (sex === 'Mujeres') return '#EC4899'; // Pink for women
+    return COLORS[index % COLORS.length];
+  };
 
   // Calculate key statistics
   const totalCountries = new Set(laborData.map((item: any) => item.geo)).size;
@@ -263,7 +270,7 @@ export const HistoricalDashboard = () => {
                   dataKey="value"
                 >
                   {populationGenderDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={getGenderColor(entry.sex, index)} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value) => [(Number(value) / 1000000).toFixed(1) + 'M', 'Población']} />
@@ -292,7 +299,7 @@ export const HistoricalDashboard = () => {
                   dataKey="value"
                 >
                   {genderDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={getGenderColor(entry.sex, index)} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value) => [(Number(value) / 1000000).toFixed(1) + 'M', 'Fuerza Laboral']} />
