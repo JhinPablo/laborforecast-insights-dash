@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -124,6 +123,30 @@ export const RealisticEuropeMap = () => {
     }
   };
 
+  // Get all data across all years to establish global min/max for consistent scaling
+  const getAllData = (): CountryData[] => {
+    const allData: CountryData[] = [];
+    
+    // Add historical data
+    historicalYears.forEach(year => {
+      allData.push(...getCountryDataForYear(year));
+    });
+    
+    // Add prediction data
+    predictionYears.forEach(year => {
+      allData.push(...getCountryDataForYear(year));
+    });
+    
+    return allData;
+  };
+
+  const allData = getAllData();
+  const globalValues = allData.map(d => d.value).filter(v => v > 0);
+  const globalMaxValue = Math.max(...globalValues);
+  const globalMinValue = Math.min(...globalValues);
+
+  console.log(`Global range: ${globalMinValue} - ${globalMaxValue}`);
+
   const currentData = getCountryDataForYear(selectedYear);
   const isHistoricalView = selectedYear < transitionYear;
   
@@ -131,10 +154,11 @@ export const RealisticEuropeMap = () => {
   const maxValue = Math.max(...values);
   const minValue = Math.min(...values);
 
-  // Create color scale - darker colors for higher values, lighter for lower values
+  // Create color scale using global min/max for consistency across years
+  // Higher values = darker colors, lower values = lighter colors
   const colorScale = scaleLinear<string>()
-    .domain([minValue, maxValue])
-    .range(isHistoricalView ? ['#dbeafe', '#1e3a8a'] : ['#dcfce7', '#14532d']); // Light to dark
+    .domain([globalMinValue, globalMaxValue])
+    .range(isHistoricalView ? ['#e6f3ff', '#003d82'] : ['#e6f7ff', '#003d00']); // Very light to very dark
 
   // European countries mapping for better country name matching
   const countryNameMapping: { [key: string]: string[] } = {
@@ -205,7 +229,9 @@ export const RealisticEuropeMap = () => {
       return '#f3f4f6'; // Light gray for no data
     }
     
-    return colorScale(countryData.value);
+    const color = colorScale(countryData.value);
+    console.log(`${countryData.geo}: ${countryData.value} -> ${color}`);
+    return color;
   };
 
   const handleYearChange = (direction: 'prev' | 'next') => {
@@ -432,8 +458,8 @@ export const RealisticEuropeMap = () => {
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs">
-                <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-100' : 'bg-green-100'}`}></div>
-                <span>Menor fuerza laboral</span>
+                <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-100' : 'bg-green-100'} border`}></div>
+                <span>Menor fuerza laboral (más claro)</span>
               </div>
               <div className="flex items-center gap-2 text-xs">
                 <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-400' : 'bg-green-400'}`}></div>
@@ -441,12 +467,15 @@ export const RealisticEuropeMap = () => {
               </div>
               <div className="flex items-center gap-2 text-xs">
                 <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-700' : 'bg-green-700'}`}></div>
-                <span>Mayor fuerza laboral</span>
+                <span>Mayor fuerza laboral (más oscuro)</span>
               </div>
               <div className="flex items-center gap-2 text-xs">
                 <div className="w-4 h-4 bg-gray-200"></div>
                 <span>Sin datos</span>
               </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              Escala global: {(globalMinValue / 1000000).toFixed(1)}M - {(globalMaxValue / 1000000).toFixed(1)}M
             </div>
           </div>
 
