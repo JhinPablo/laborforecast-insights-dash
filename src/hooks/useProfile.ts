@@ -8,7 +8,9 @@ interface Profile {
   email: string;
   first_name: string;
   last_name: string;
-  subscription_plan: 'free' | 'silver' | 'gold';
+  subscription_plan: string; // Changed from union type to string to match database
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const useProfile = () => {

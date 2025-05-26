@@ -51,6 +51,15 @@ export const AuthPage = () => {
 
         if (error) throw error;
 
+        // Update user to gold plan after successful login
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('profiles')
+            .update({ subscription_plan: 'gold' })
+            .eq('id', user.id);
+        }
+
         toast({
           title: 'Welcome back!',
           description: 'You have been signed in successfully.',
@@ -145,7 +154,11 @@ export const AuthPage = () => {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+              disabled={loading}
+            >
               {loading ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
             </Button>
           </form>
