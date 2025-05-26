@@ -16,13 +16,13 @@ export const PredictionMap = () => {
 
   // Move all hooks to the top before any early returns
   const years = predictionsData?.length ? [...new Set(predictionsData
-    .map(item => item.time_period)
-    .filter(year => year && !isNaN(Number(year)))
-  )].sort((a, b) => Number(a) - Number(b)) : [];
+    .map(item => Number(item.time_period))
+    .filter(year => !isNaN(year))
+  )].sort((a, b) => a - b) : [];
 
   const countries = predictionsData?.length ? [...new Set(predictionsData
     .map(item => item.geo)
-    .filter(geo => geo)
+    .filter(geo => geo && typeof geo === 'string')
   )].sort() : [];
 
   // Auto-play functionality
@@ -44,6 +44,7 @@ export const PredictionMap = () => {
   console.log('Geo data:', geoData?.length || 0, 'records');
   console.log('Available years:', years);
   console.log('Available countries:', countries.length);
+  console.log('Sample prediction item:', predictionsData?.[0]);
 
   // Early returns after all hooks
   if (predictionsLoading || geoLoading) {
@@ -71,45 +72,59 @@ export const PredictionMap = () => {
     );
   }
 
-  // Get data for specific year - fix TypeScript errors by ensuring geo property exists
+  // Get data for specific year - fix filtering and data processing
   const getDataForYear = (year: number) => {
-    return predictionsData
-      .filter(item => item.time_period === year && item.predicted_labour_force && item.geo)
+    const yearData = predictionsData
+      .filter(item => {
+        const itemYear = Number(item.time_period);
+        const laborForce = Number(item.predicted_labour_force);
+        return itemYear === year && !isNaN(laborForce) && laborForce > 0 && item.geo;
+      })
       .map(item => ({
-        geo: item.geo,
+        geo: String(item.geo),
         predicted_labour_force: Number(item.predicted_labour_force),
-        time_period: item.time_period
+        time_period: Number(item.time_period)
       }))
-      .filter(item => !isNaN(item.predicted_labour_force))
       .sort((a, b) => b.predicted_labour_force - a.predicted_labour_force);
+    
+    console.log(`Data for year ${year}:`, yearData.length, 'countries');
+    return yearData;
   };
 
   // Get country timeline
   const getCountryTimeline = (country: string) => {
-    return predictionsData
-      .filter(item => item.geo === country && item.predicted_labour_force)
+    const timeline = predictionsData
+      .filter(item => {
+        const laborForce = Number(item.predicted_labour_force);
+        return item.geo === country && !isNaN(laborForce) && laborForce > 0;
+      })
       .map(item => ({
-        geo: item.geo,
+        geo: String(item.geo),
         time_period: Number(item.time_period),
         predicted_labour_force: Number(item.predicted_labour_force)
       }))
-      .filter(item => !isNaN(item.time_period) && !isNaN(item.predicted_labour_force))
+      .filter(item => !isNaN(item.time_period))
       .sort((a, b) => a.time_period - b.time_period);
+    
+    console.log(`Timeline for ${country}:`, timeline.length, 'data points');
+    return timeline;
   };
 
   // Get regional analysis
   const getRegionalAnalysis = () => {
     const merged = predictionsData
-      .filter(item => item.predicted_labour_force && item.geo)
+      .filter(item => {
+        const laborForce = Number(item.predicted_labour_force);
+        return !isNaN(laborForce) && laborForce > 0 && item.geo;
+      })
       .map(pred => {
         const geo = geoData.find(g => g.geo === pred.geo);
         return {
-          geo: pred.geo,
+          geo: String(pred.geo),
           predicted_labour_force: Number(pred.predicted_labour_force),
           un_region: geo?.un_region || 'Unknown'
         };
-      })
-      .filter(item => !isNaN(item.predicted_labour_force));
+      });
 
     const groupedByRegion = merged.reduce((acc: any, item) => {
       const region = item.un_region;
@@ -122,12 +137,15 @@ export const PredictionMap = () => {
       return acc;
     }, {});
 
-    return Object.values(groupedByRegion).map((item: any) => ({
+    const result = Object.values(groupedByRegion).map((item: any) => ({
       region: item.region,
-      average: (item.total / item.count).toFixed(1),
-      total: item.total.toFixed(1),
+      average: Number((item.total / item.count).toFixed(1)),
+      total: Number((item.total).toFixed(1)),
       countries: item.countries.size
     })).filter(item => item.region !== 'Unknown');
+
+    console.log('Regional analysis:', result);
+    return result;
   };
 
   // Get yearly trends
@@ -139,18 +157,23 @@ export const PredictionMap = () => {
       
       return {
         year,
-        total: (total / 1000000).toFixed(1),
-        average: (average / 1000000).toFixed(1),
+        total: Number((total / 1000000).toFixed(1)),
+        average: Number((average / 1000000).toFixed(1)),
         countries: yearData.length
       };
-    });
+    }).filter(item => item.countries > 0);
 
+    console.log('Yearly trends:', yearlyData);
     return yearlyData;
   };
 
   const currentYearData = getDataForYear(selectedYear);
   const regionalAnalysis = getRegionalAnalysis();
   const yearlyTrends = getYearlyTrends();
+
+  console.log('Current year data length:', currentYearData.length);
+  console.log('Regional analysis length:', regionalAnalysis.length);
+  console.log('Yearly trends length:', yearlyTrends.length);
 
   return (
     <div className="space-y-6">
