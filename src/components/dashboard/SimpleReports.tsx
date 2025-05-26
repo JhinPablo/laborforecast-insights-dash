@@ -65,7 +65,7 @@ export const SimpleReports = () => {
       if (!acc[country]) {
         acc[country] = { country, totalLabor: 0, records: 0 };
       }
-      acc[country].totalLabor += item.labour_force || 0;
+      acc[country].totalLabor += Number(item.labour_force) || 0;
       acc[country].records += 1;
       return acc;
     }, {});
@@ -75,7 +75,7 @@ export const SimpleReports = () => {
         ...item,
         avgLabor: (item.totalLabor / item.records).toFixed(1)
       }))
-      .sort((a: any, b: any) => b.totalLabor - a.totalLabor)
+      .sort((a: any, b: any) => Number(b.totalLabor) - Number(a.totalLabor))
       .slice(0, 10);
   };
 
@@ -86,7 +86,7 @@ export const SimpleReports = () => {
       if (!acc[year]) {
         acc[year] = { year, labor: 0, laborCount: 0 };
       }
-      acc[year].labor += item.labour_force || 0;
+      acc[year].labor += Number(item.labour_force) || 0;
       acc[year].laborCount += 1;
       return acc;
     }, {});
@@ -96,7 +96,7 @@ export const SimpleReports = () => {
       if (!acc[year]) {
         acc[year] = { population: 0, popCount: 0 };
       }
-      acc[year].population += item.population || 0;
+      acc[year].population += Number(item.population) || 0;
       acc[year].popCount += 1;
       return acc;
     }, {});
@@ -113,7 +113,7 @@ export const SimpleReports = () => {
           ratio: ((laborInfo.labor / laborInfo.laborCount) / (popInfo.population / popInfo.popCount) * 100).toFixed(1)
         };
       })
-      .filter(item => item.avgPopulation > 0)
+      .filter(item => Number(item.avgPopulation) > 0)
       .sort((a, b) => a.year - b.year)
       .slice(0, 15); // Last 15 years with data
   };
@@ -125,14 +125,14 @@ export const SimpleReports = () => {
       if (!acc[sex]) {
         acc[sex] = 0;
       }
-      acc[sex] += item.labour_force || 0;
+      acc[sex] += Number(item.labour_force) || 0;
       return acc;
     }, {});
 
     return Object.entries(genderData).map(([sex, total]: any) => ({
       sex: sex === 'Males' ? 'Hombres' : sex === 'Females' ? 'Mujeres' : 'Total',
-      total: (total / 1000000).toFixed(1), // in millions
-      value: total
+      total: (Number(total) / 1000000).toFixed(1), // in millions
+      value: Number(total)
     })).filter(item => item.sex !== 'Total');
   };
 
@@ -143,14 +143,14 @@ export const SimpleReports = () => {
       if (!acc[age]) {
         acc[age] = 0;
       }
-      acc[age] += item.population || 0;
+      acc[age] += Number(item.population) || 0;
       return acc;
     }, {});
 
     return Object.entries(ageData)
       .map(([age, total]: any) => ({
         age,
-        population: (total / 1000000).toFixed(1) // in millions
+        population: (Number(total) / 1000000).toFixed(1) // in millions
       }))
       .sort((a: any, b: any) => {
         // Sort age groups logically
@@ -242,7 +242,7 @@ export const SimpleReports = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="country" angle={-45} textAnchor="end" height={80} />
                 <YAxis />
-                <Tooltip formatter={(value) => [`${value}K`, 'Fuerza Laboral']} />
+                <Tooltip formatter={(value) => [`${Number(value).toLocaleString()}`, 'Fuerza Laboral']} />
                 <Bar dataKey="totalLabor" fill="#3B82F6" />
               </BarChart>
             </ResponsiveContainer>
@@ -272,7 +272,7 @@ export const SimpleReports = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [(value / 1000000).toFixed(1) + 'M', 'Fuerza Laboral']} />
+                <Tooltip formatter={(value) => [(Number(value) / 1000000).toFixed(1) + 'M', 'Fuerza Laboral']} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -370,8 +370,8 @@ export const SimpleReports = () => {
                   <span className="font-medium">{country.country}</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-medium">{(country.totalLabor / 1000).toFixed(1)}M total</div>
-                  <div className="text-xs text-gray-500">{country.avgLabor}K promedio</div>
+                  <div className="text-sm font-medium">{(Number(country.totalLabor) / 1000000).toFixed(1)}M total</div>
+                  <div className="text-xs text-gray-500">{Number(country.avgLabor).toFixed(0)}K promedio</div>
                 </div>
               </div>
             ))}
