@@ -19,7 +19,7 @@ export const EuropeVectorMap = () => {
   const { data: geoData, loading: geoLoading } = useCSVData('geo_data.csv');
   
   const [laborData, setLaborData] = useState([]);
-  const [selectedYear, setSelectedYear] = useState(2020);
+  const [selectedYear, setSelectedYear] = useState(2025);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
@@ -41,14 +41,18 @@ export const EuropeVectorMap = () => {
     }
   };
 
-  // Combine historical and prediction years
-  const historicalYears = [...new Set(laborData.map((item: any) => item.year))].sort();
+  // Get available years - prioritize predictions data since historical data might be empty
   const predictionYears = [...new Set(predictionsData.map(item => item.time_period))].sort();
-  const allYears = [...new Set([...historicalYears, ...predictionYears])].sort();
+  const historicalYears = [...new Set(laborData.map((item: any) => item.year))].sort();
+  
+  // If no historical data, use only prediction years
+  const allYears = historicalYears.length > 0 
+    ? [...new Set([...historicalYears, ...predictionYears])].sort()
+    : predictionYears;
   
   const minYear = Math.min(...allYears);
   const maxYear = Math.max(...allYears);
-  const transitionYear = Math.max(...historicalYears) + 1;
+  const transitionYear = historicalYears.length > 0 ? Math.max(...historicalYears) + 1 : Math.min(...predictionYears);
 
   // Auto-play functionality
   useEffect(() => {
@@ -66,7 +70,7 @@ export const EuropeVectorMap = () => {
   }, [isPlaying, allYears]);
 
   const getCountryDataForYear = (year: number): CountryData[] => {
-    const isHistorical = year < transitionYear;
+    const isHistorical = historicalYears.length > 0 && year < transitionYear;
     
     if (isHistorical) {
       const yearData = laborData.filter((item: any) => item.year === year);
@@ -90,7 +94,9 @@ export const EuropeVectorMap = () => {
         };
       });
     } else {
+      // Use predictions data
       const yearData = predictionsData.filter(item => item.time_period === year);
+      console.log(`Prediction data for year ${year}:`, yearData.length, 'countries');
       return yearData.map(prediction => {
         const geoInfo = geoData.find(geo => geo.geo === prediction.geo);
         return {
@@ -104,8 +110,11 @@ export const EuropeVectorMap = () => {
   };
 
   const currentData = getCountryDataForYear(selectedYear);
-  const isHistoricalView = selectedYear < transitionYear;
+  const isHistoricalView = historicalYears.length > 0 && selectedYear < transitionYear;
   
+  console.log(`Current data for year ${selectedYear}:`, currentData.length, 'countries');
+  console.log('Countries with data:', currentData.map(d => d.geo));
+
   const values = currentData.map(d => d.value);
   const maxValue = Math.max(...values);
   const minValue = Math.min(...values);
@@ -166,7 +175,10 @@ export const EuropeVectorMap = () => {
             Participación de Fuerza Laboral por País
           </CardTitle>
           <CardDescription>
-            Datos históricos ({Math.min(...historicalYears)}-{Math.max(...historicalYears)}) y predicciones ({Math.min(...predictionYears)}-{Math.max(...predictionYears)})
+            {historicalYears.length > 0 
+              ? `Datos históricos (${Math.min(...historicalYears)}-${Math.max(...historicalYears)}) y predicciones (${Math.min(...predictionYears)}-${Math.max(...predictionYears)})`
+              : `Predicciones (${Math.min(...predictionYears)}-${Math.max(...predictionYears)})`
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -187,7 +199,7 @@ export const EuropeVectorMap = () => {
                 )}
               </div>
               <div className="text-xs text-gray-500">
-                Transición en {transitionYear}
+                {historicalYears.length > 0 ? `Transición en ${transitionYear}` : 'Solo predicciones disponibles'}
               </div>
             </div>
           </div>
@@ -235,7 +247,9 @@ export const EuropeVectorMap = () => {
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>{minYear}</span>
-                <span className="text-xs text-gray-400">Transición: {transitionYear}</span>
+                {historicalYears.length > 0 && (
+                  <span className="text-xs text-gray-400">Transición: {transitionYear}</span>
+                )}
                 <span>{maxYear}</span>
               </div>
               <Slider
@@ -252,8 +266,6 @@ export const EuropeVectorMap = () => {
           {/* Europe Vector Map */}
           <div className="relative bg-gradient-to-br from-blue-50 via-white to-green-50 rounded-lg overflow-hidden border-2 border-blue-200">
             <svg viewBox="0 0 1000 600" className="w-full h-96">
-              {/* Simplified Europe countries - main ones with data */}
-              
               {/* Germany */}
               <path
                 d="M520 280 L540 270 L560 280 L565 300 L555 320 L535 325 L515 315 L510 295 Z"
@@ -464,6 +476,16 @@ export const EuropeVectorMap = () => {
                 onClick={() => setSelectedCountry(selectedCountry === 'Ireland' ? null : 'Ireland')}
               />
 
+              {/* Cyprus */}
+              <path
+                d="M690 370 L710 365 L715 380 L705 385 L695 380 Z"
+                fill={getCountryColor('Cyprus')}
+                stroke="#fff"
+                strokeWidth="1"
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setSelectedCountry(selectedCountry === 'Cyprus' ? null : 'Cyprus')}
+              />
+
               {/* Country labels */}
               <text x="530" y="295" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">DE</text>
               <text x="490" y="335" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">FR</text>
@@ -471,29 +493,37 @@ export const EuropeVectorMap = () => {
               <text x="550" y="385" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">IT</text>
               <text x="470" y="255" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">UK</text>
               <text x="595" y="280" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">PL</text>
+              <text x="575" y="305" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">CZ</text>
+              <text x="600" y="315" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">HU</text>
+              <text x="645" y="335" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">RO</text>
+              <text x="650" y="360" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">BG</text>
+              <text x="555" y="315" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">AT</text>
+              <text x="512" y="265" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">NL</text>
+              <text x="502" y="282" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">BE</text>
+              <text x="705" y="375" textAnchor="middle" className="text-xs font-medium fill-gray-700 pointer-events-none">CY</text>
             </svg>
 
             {/* Enhanced Map Legend */}
             <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-4 border border-gray-200">
               <div className="text-sm font-semibold mb-3 text-gray-800">
-                Tasa de participación en fuerza laboral
+                Fuerza laboral predicha
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs">
                   <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-100' : 'bg-green-100'}`}></div>
-                  <span>30% - Baja</span>
+                  <span>Baja</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-400' : 'bg-green-400'}`}></div>
-                  <span>50% - Media</span>
+                  <span>Media</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-600' : 'bg-green-600'}`}></div>
-                  <span>70% - Alta</span>
+                  <span>Alta</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-900' : 'bg-green-900'}`}></div>
-                  <span>80%+ - Muy Alta</span>
+                  <span>Muy Alta</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <div className="w-4 h-4 bg-gray-200"></div>
@@ -532,7 +562,7 @@ export const EuropeVectorMap = () => {
                     <div>
                       <span className="text-gray-600">{label}:</span>
                       <div className="font-semibold text-lg text-blue-700">
-                        {(countryData.value / 1000).toFixed(0)}K
+                        {(countryData.value / 1000000).toFixed(1)}M
                       </div>
                     </div>
                     <div>
@@ -569,7 +599,7 @@ export const EuropeVectorMap = () => {
                   Total {isHistoricalView ? 'Histórico' : 'Predicho'}
                 </div>
                 <div className="text-2xl font-bold text-green-600">
-                  {(currentData.reduce((sum, d) => sum + d.value, 0) / 1000).toFixed(0)}K
+                  {(currentData.reduce((sum, d) => sum + d.value, 0) / 1000000).toFixed(0)}M
                 </div>
               </CardContent>
             </Card>
@@ -577,7 +607,7 @@ export const EuropeVectorMap = () => {
               <CardContent className="p-4">
                 <div className="text-sm text-gray-600">Promedio</div>
                 <div className="text-2xl font-bold text-amber-600">
-                  {currentData.length > 0 ? (currentData.reduce((sum, d) => sum + d.value, 0) / currentData.length / 1000).toFixed(0) : '0'}K
+                  {currentData.length > 0 ? (currentData.reduce((sum, d) => sum + d.value, 0) / currentData.length / 1000000).toFixed(1) : '0'}M
                 </div>
               </CardContent>
             </Card>
