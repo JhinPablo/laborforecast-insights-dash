@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCSVData } from '@/hooks/useCSVData';
@@ -113,6 +114,9 @@ export const HistoricalDashboard = () => {
 
   // Age distribution from population data - FIXED
   const getAgeDistribution = () => {
+    console.log('Processing age distribution...');
+    console.log('Sample population data:', populationData.slice(0, 5));
+    
     const ageData = populationData.reduce((acc: any, item: any) => {
       const age = item.age;
       if (!acc[age]) {
@@ -122,22 +126,45 @@ export const HistoricalDashboard = () => {
       return acc;
     }, {});
 
-    // Filter out unwanted age groups and sort properly
-    const validAgeGroups = ['Y_LT5', 'Y5-9', 'Y10-14', 'Y_LT15', 'Y15-19', 'Y20-24', 'Y25-29', 'Y30-34', 'Y35-39', 'Y40-44', 'Y45-49', 'Y50-54', 'Y55-59', 'Y60-64', 'Y15-64', 'Y65-69', 'Y70-74', 'Y75-79', 'Y80-84', 'Y_GE85', 'Y_GE65'];
+    console.log('Age data aggregated:', Object.keys(ageData));
+
+    // Define valid age groups in the correct order, excluding TOTAL and UNK
+    const validAgeGroups = [
+      'Y_LT5',    // <5 años (should be first)
+      'Y5-9',     // 5-9 años
+      'Y10-14',   // 10-14 años
+      'Y_LT15',   // <15 años
+      'Y15-19',   // 15-19 años
+      'Y20-24',   // 20-24 años
+      'Y25-29',   // 25-29 años
+      'Y30-34',   // 30-34 años
+      'Y35-39',   // 35-39 años
+      'Y40-44',   // 40-44 años
+      'Y45-49',   // 45-49 años
+      'Y50-54',   // 50-54 años
+      'Y55-59',   // 55-59 años
+      'Y60-64',   // 60-64 años
+      'Y15-64',   // 15-64 años
+      'Y65-69',   // 65-69 años
+      'Y70-74',   // 70-74 años
+      'Y75-79',   // 75-79 años
+      'Y80-84',   // 80-84 años
+      'Y_GE85',   // 85+ años
+      'Y_GE65'    // 65+ años
+    ];
     
-    return Object.entries(ageData)
-      .filter(([age, total]) => validAgeGroups.includes(age) && age !== 'TOTAL' && age !== 'UNK')
-      .map(([age, total]: any) => ({
+    const result = validAgeGroups
+      .filter(age => ageData[age] && Number(ageData[age]) > 0) // Only include ages with data
+      .map(age => ({
         age,
-        population: (Number(total) / 1000000).toFixed(1),
-        ageLabel: getAgeLabel(age)
+        population: (Number(ageData[age]) / 1000000).toFixed(1),
+        ageLabel: getAgeLabel(age),
+        value: Number(ageData[age])
       }))
-      .sort((a: any, b: any) => {
-        // Custom sort to put Y_LT5 first, then logical order
-        const ageOrder = ['Y_LT5', 'Y5-9', 'Y10-14', 'Y_LT15', 'Y15-19', 'Y20-24', 'Y25-29', 'Y30-34', 'Y35-39', 'Y40-44', 'Y45-49', 'Y50-54', 'Y55-59', 'Y60-64', 'Y15-64', 'Y65-69', 'Y70-74', 'Y75-79', 'Y80-84', 'Y_GE85', 'Y_GE65'];
-        return ageOrder.indexOf(a.age) - ageOrder.indexOf(b.age);
-      })
-      .slice(0, 12); // Limit to most relevant age groups
+      .slice(0, 10); // Limit to top 10 for better visualization
+
+    console.log('Processed age distribution:', result);
+    return result;
   };
 
   // Helper function for age labels
@@ -348,28 +375,34 @@ export const HistoricalDashboard = () => {
             <CardDescription>Población por grupos etarios (millones)</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={ageDistribution}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="ageLabel"
-                  angle={-45} 
-                  textAnchor="end" 
-                  height={80}
-                />
-                <YAxis />
-                <Tooltip 
-                  labelFormatter={(value, payload) => {
-                    if (payload && payload[0]) {
-                      return payload[0].payload.ageLabel;
-                    }
-                    return value;
-                  }}
-                  formatter={(value) => [`${value}M`, 'Población']}
-                />
-                <Bar dataKey="population" fill="#F59E0B" />
-              </BarChart>
-            </ResponsiveContainer>
+            {ageDistribution.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={ageDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="ageLabel"
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={80}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    labelFormatter={(value, payload) => {
+                      if (payload && payload[0]) {
+                        return payload[0].payload.ageLabel;
+                      }
+                      return value;
+                    }}
+                    formatter={(value) => [`${value}M`, 'Población']}
+                  />
+                  <Bar dataKey="population" fill="#F59E0B" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-40">
+                <p className="text-gray-500">No hay datos de distribución por edad disponibles</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
