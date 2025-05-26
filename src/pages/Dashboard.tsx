@@ -1,15 +1,19 @@
 
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { Navbar } from '@/components/layout/Navbar';
+import { DashboardNavbar } from '@/components/layout/DashboardNavbar';
 import { Navigate } from 'react-router-dom';
 import { FreePlan } from '@/components/dashboard/FreePlan';
 import { SilverPlan } from '@/components/dashboard/SilverPlan';
 import { GoldPlan } from '@/components/dashboard/GoldPlan';
+import { AnalyticsDashboard } from '@/components/dashboard/AnalyticsDashboard';
+import { EuropeMap } from '@/components/dashboard/EuropeMap';
 
 export const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
+  const [activeSection, setActiveSection] = useState('dashboard');
 
   if (authLoading || profileLoading) {
     return (
@@ -37,11 +41,25 @@ export const Dashboard = () => {
     }
   };
 
+  const renderSectionContent = () => {
+    switch (activeSection) {
+      case 'reports':
+        return <AnalyticsDashboard />;
+      case 'predictions':
+        return <EuropeMap />;
+      default:
+        return renderPlanContent();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+      <DashboardNavbar 
+        activeSection={activeSection} 
+        onSectionChange={setActiveSection} 
+      />
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {renderPlanContent()}
+        {renderSectionContent()}
       </main>
     </div>
   );

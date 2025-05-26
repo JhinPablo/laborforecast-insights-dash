@@ -1,0 +1,329 @@
+
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { useCSVData } from '@/hooks/useCSVData';
+import { MapPin, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface CountryMarker {
+  geo: string;
+  latitude: number;
+  longitude: number;
+  predicted_labour_force: number;
+  un_region: string;
+}
+
+export const EuropeMap = () => {
+  const { data: predictionsData, loading: predictionsLoading } = useCSVData('predictions.csv');
+  const { data: geoData, loading: geoLoading } = useCSVData('geo_data.csv');
+  
+  const [selectedYear, setSelectedYear] = useState(2025);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+
+  const years = [...new Set(predictionsData.map(item => item.time_period))].sort();
+  const minYear = Math.min(...years);
+  const maxYear = Math.max(...years);
+
+  // Auto-play functionality
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPlaying && years.length > 0) {
+      interval = setInterval(() => {
+        setSelectedYear(prev => {
+          const currentIndex = years.indexOf(prev);
+          const nextIndex = currentIndex + 1;
+          return nextIndex >= years.length ? years[0] : years[nextIndex];
+        });
+      }, 1500);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, years]);
+
+  const getMarkersForYear = (year: number): CountryMarker[] => {
+    const yearData = predictionsData.filter(item => item.time_period === year);
+    return yearData.map(prediction => {
+      const geoInfo = geoData.find(geo => geo.geo === prediction.geo);
+      return {
+        geo: prediction.geo,
+        latitude: geoInfo?.latitude || 0,
+        longitude: geoInfo?.longitude || 0,
+        predicted_labour_force: prediction.predicted_labour_force,
+        un_region: geoInfo?.un_region || 'Unknown'
+      };
+    }).filter(marker => marker.latitude !== 0 && marker.longitude !== 0);
+  };
+
+  const currentMarkers = getMarkersForYear(selectedYear);
+  const maxValue = Math.max(...currentMarkers.map(m => m.predicted_labour_force));
+  const minValue = Math.min(...currentMarkers.map(m => m.predicted_labour_force));
+
+  const getMarkerSize = (value: number) => {
+    const normalized = (value - minValue) / (maxValue - minValue);
+    return Math.max(6, normalized * 25);
+  };
+
+  const getMarkerColor = (value: number) => {
+    const normalized = (value - minValue) / (maxValue - minValue);
+    if (normalized > 0.7) return '#059669'; // green-600
+    if (normalized > 0.4) return '#d97706'; // amber-600
+    return '#dc2626'; // red-600
+  };
+
+  // Convert lat/lng to SVG coordinates for Europe-focused projection
+  const projectToEurope = (lat: number, lng: number) => {
+    // Europe bounds: roughly 35-71°N, -11-40°E
+    const minLat = 35, maxLat = 71;
+    const minLng = -11, maxLng = 40;
+    
+    // Clamp coordinates to Europe bounds
+    const clampedLat = Math.max(minLat, Math.min(maxLat, lat));
+    const clampedLng = Math.max(minLng, Math.min(maxLng, lng));
+    
+    // Project to SVG coordinates (800x600)
+    const x = ((clampedLng - minLng) / (maxLng - minLng)) * 800;
+    const y = ((maxLat - clampedLat) / (maxLat - minLat)) * 600;
+    
+    return { x, y };
+  };
+
+  const handleYearChange = (direction: 'prev' | 'next') => {
+    const currentIndex = years.indexOf(selectedYear);
+    if (direction === 'prev' && currentIndex > 0) {
+      setSelectedYear(years[currentIndex - 1]);
+    } else if (direction === 'next' && currentIndex < years.length - 1) {
+      setSelectedYear(years[currentIndex + 1]);
+    }
+  };
+
+  if (predictionsLoading || geoLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center h-96">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MapPin className="h-5 w-5" />
+          Mapa Interactivo de Predicciones de Fuerza Laboral Europea
+        </CardTitle>
+        <CardDescription>
+          Explora las predicciones de fuerza laboral en países europeos a través del tiempo
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {/* Time Controls */}
+        <div className="mb-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handleYearChange('prev')}
+                disabled={years.indexOf(selectedYear) === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsPlaying(!isPlaying)}
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handleYearChange('next')}
+                disabled={years.indexOf(selectedYear) === years.length - 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">{selectedYear}</div>
+              <div className="text-sm text-gray-600">Año Seleccionado</div>
+            </div>
+          </div>
+
+          {/* Year Slider */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>{minYear}</span>
+              <span>{maxYear}</span>
+            </div>
+            <Slider
+              value={[selectedYear]}
+              onValueChange={(value) => setSelectedYear(value[0])}
+              min={minYear}
+              max={maxYear}
+              step={1}
+              className="w-full"
+            />
+          </div>
+        </div>
+
+        {/* Europe Map Container */}
+        <div className="relative bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg h-96 overflow-hidden border-2 border-blue-200">
+          <svg 
+            viewBox="0 0 800 600" 
+            className="w-full h-full"
+          >
+            {/* Background with European-style gradient */}
+            <defs>
+              <linearGradient id="europeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{stopColor:"#e0f2fe", stopOpacity:1}} />
+                <stop offset="100%" style={{stopColor:"#bae6fd", stopOpacity:1}} />
+              </linearGradient>
+              <pattern id="europeGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#cbd5e1" strokeWidth="0.5" opacity="0.3"/>
+              </pattern>
+            </defs>
+            
+            <rect width="800" height="600" fill="url(#europeGrid)" />
+            <rect width="800" height="600" fill="url(#europeGradient)" opacity="0.7" />
+            
+            {/* Country markers */}
+            {currentMarkers.map((marker, index) => {
+              const { x, y } = projectToEurope(marker.latitude, marker.longitude);
+              const size = getMarkerSize(marker.predicted_labour_force);
+              const color = getMarkerColor(marker.predicted_labour_force);
+              
+              return (
+                <g key={`${marker.geo}-${index}`}>
+                  {/* Marker shadow */}
+                  <circle
+                    cx={x + 1}
+                    cy={y + 1}
+                    r={size / 2}
+                    fill="rgba(0,0,0,0.2)"
+                  />
+                  {/* Main marker */}
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={size / 2}
+                    fill={color}
+                    fillOpacity={0.8}
+                    stroke="#ffffff"
+                    strokeWidth="2"
+                    className="cursor-pointer hover:fillOpacity-100 transition-all hover:scale-110"
+                    onClick={() => setSelectedCountry(
+                      selectedCountry === marker.geo ? null : marker.geo
+                    )}
+                  />
+                  {/* Country label */}
+                  <text
+                    x={x}
+                    y={y + size / 2 + 15}
+                    textAnchor="middle"
+                    className="text-xs font-semibold fill-gray-800 pointer-events-none"
+                    style={{ fontSize: '10px' }}
+                  >
+                    {marker.geo}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* Map Legend */}
+          <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 border">
+            <div className="text-sm font-semibold mb-3 text-gray-800">Escala de Fuerza Laboral</div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-4 h-4 rounded-full bg-red-600"></div>
+                <span>Baja ({minValue.toFixed(1)}M)</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-4 h-4 rounded-full bg-amber-600"></div>
+                <span>Media</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-4 h-4 rounded-full bg-green-600"></div>
+                <span>Alta ({maxValue.toFixed(1)}M)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Map Title */}
+          <div className="absolute top-4 left-4 bg-white/90 rounded-lg px-3 py-2 shadow-md">
+            <div className="text-sm font-semibold text-gray-800">Europa - {selectedYear}</div>
+          </div>
+        </div>
+
+        {/* Selected Country Info */}
+        {selectedCountry && (
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="font-semibold text-lg mb-2 text-blue-900">{selectedCountry}</h3>
+            {(() => {
+              const countryData = currentMarkers.find(m => m.geo === selectedCountry);
+              if (!countryData) return null;
+              
+              return (
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Fuerza Laboral Predicha:</span>
+                    <div className="font-semibold text-lg text-blue-700">
+                      {countryData.predicted_labour_force.toFixed(1)}M
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Región:</span>
+                    <div className="font-medium text-gray-800">{countryData.un_region}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Coordenadas:</span>
+                    <div className="font-mono text-xs text-gray-600">
+                      {countryData.latitude.toFixed(2)}, {countryData.longitude.toFixed(2)}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Año:</span>
+                    <div className="font-medium text-gray-800">{selectedYear}</div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Statistics Summary */}
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-sm text-gray-600">Países</div>
+              <div className="text-2xl font-bold text-blue-600">{currentMarkers.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-sm text-gray-600">Total Predicho</div>
+              <div className="text-2xl font-bold text-green-600">
+                {currentMarkers.reduce((sum, m) => sum + m.predicted_labour_force, 0).toFixed(1)}M
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-sm text-gray-600">Promedio</div>
+              <div className="text-2xl font-bold text-amber-600">
+                {(currentMarkers.reduce((sum, m) => sum + m.predicted_labour_force, 0) / currentMarkers.length).toFixed(1)}M
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
