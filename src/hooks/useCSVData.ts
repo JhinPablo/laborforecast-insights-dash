@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 interface CSVData {
@@ -14,10 +13,18 @@ export const useCSVData = (filename: string) => {
     const loadCSV = async () => {
       try {
         setLoading(true);
-        // Updated path to look in public directory
-        const response = await fetch(`/data/${filename}`);
-        if (!response.ok) {
-          throw new Error(`Failed to load ${filename}`);
+        // Try both src/data and public/data paths
+        let response;
+        try {
+          response = await fetch(`/src/data/${filename}`);
+          if (!response.ok) {
+            throw new Error('Not found in src/data');
+          }
+        } catch {
+          response = await fetch(`/data/${filename}`);
+          if (!response.ok) {
+            throw new Error(`Failed to load ${filename} from both locations`);
+          }
         }
         
         const text = await response.text();
@@ -30,11 +37,12 @@ export const useCSVData = (filename: string) => {
           headers.forEach((header, index) => {
             const value = values[index]?.trim();
             // Try to parse as number, otherwise keep as string
-            row[header.trim()] = !isNaN(Number(value)) ? Number(value) : value;
+            row[header.trim()] = !isNaN(Number(value)) && value !== '' ? Number(value) : value;
           });
           return row;
         });
         
+        console.log(`Loaded ${parsedData.length} records from ${filename}`);
         setData(parsedData);
         setError(null);
       } catch (err) {

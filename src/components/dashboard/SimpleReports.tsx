@@ -6,8 +6,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { TrendingUp, Users, Globe, Calendar } from 'lucide-react';
 
 export const SimpleReports = () => {
-  const { data: laborData, loading: laborLoading } = useCSVData('labor.csv');
-  const { data: populationData, loading: populationLoading } = useCSVData('population.csv');
+  const { data: laborData, loading: laborLoading, error: laborError } = useCSVData('labor.csv');
+  const { data: populationData, loading: populationLoading, error: populationError } = useCSVData('population.csv');
 
   const loading = laborLoading || populationLoading;
 
@@ -19,10 +19,24 @@ export const SimpleReports = () => {
     );
   }
 
-  console.log('Labor data:', laborData.length);
-  console.log('Population data:', populationData.length);
+  if (laborError || populationError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">Error cargando datos:</p>
+          {laborError && <p className="text-sm text-gray-600">Labor: {laborError}</p>}
+          {populationError && <p className="text-sm text-gray-600">Population: {populationError}</p>}
+        </div>
+      </div>
+    );
+  }
 
-  // Process data for distribution by countries
+  console.log('Labor data loaded:', laborData.length);
+  console.log('Population data loaded:', populationData.length);
+  console.log('Sample labor data:', laborData[0]);
+  console.log('Sample population data:', populationData[0]);
+
+  // Process data for distribution by countries (using labor data)
   const getCountryDistribution = () => {
     const countryData = laborData.reduce((acc: any, item: any) => {
       const country = item.geo;
@@ -82,7 +96,7 @@ export const SimpleReports = () => {
       .slice(0, 15); // Last 15 years with data
   };
 
-  // Gender distribution data
+  // Gender distribution data from labor
   const getGenderDistribution = () => {
     const genderData = laborData.reduce((acc: any, item: any) => {
       const sex = item.sex;
@@ -124,9 +138,28 @@ export const SimpleReports = () => {
       .filter(item => item.age !== 'TOTAL');
   };
 
+  // Gender distribution from population data
+  const getPopulationGenderDistribution = () => {
+    const genderData = populationData.reduce((acc: any, item: any) => {
+      const sex = item.sex;
+      if (!acc[sex]) {
+        acc[sex] = 0;
+      }
+      acc[sex] += Number(item.population) || 0;
+      return acc;
+    }, {});
+
+    return Object.entries(genderData).map(([sex, total]: any) => ({
+      sex: sex === 'Males' ? 'Hombres' : sex === 'Females' ? 'Mujeres' : 'Total',
+      total: (Number(total) / 1000000).toFixed(1), // in millions
+      value: Number(total)
+    })).filter(item => item.sex !== 'Total');
+  };
+
   const countryDistribution = getCountryDistribution();
   const populationLaborData = getPopulationLaborComparison();
   const genderDistribution = getGenderDistribution();
+  const populationGenderDistribution = getPopulationGenderDistribution();
   const ageDistribution = getAgeDistribution();
 
   const COLORS = ['#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6'];
@@ -213,10 +246,39 @@ export const SimpleReports = () => {
           </CardContent>
         </Card>
 
-        {/* Gender Distribution */}
+        {/* Population Gender Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Distribución por Género</CardTitle>
+            <CardTitle>Distribución Poblacional por Género</CardTitle>
+            <CardDescription>Población total por género (millones)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={populationGenderDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ sex, total }) => `${sex}: ${total}M`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {populationGenderDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [(Number(value) / 1000000).toFixed(1) + 'M', 'Población']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Labor Gender Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribución Laboral por Género</CardTitle>
             <CardDescription>Fuerza laboral total por género (millones)</CardDescription>
           </CardHeader>
           <CardContent>
@@ -242,7 +304,50 @@ export const SimpleReports = () => {
           </CardContent>
         </Card>
 
-        {/* Population vs Labor Comparison */}
+        {/* Age Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribución por Edad</CardTitle>
+            <CardDescription>Población por grupos etarios (millones)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={ageDistribution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="age" 
+                  tickFormatter={(value) => {
+                    const labels: {[key: string]: string} = {
+                      'Y_LT15': '<15 años',
+                      'Y15-64': '15-64 años',
+                      'Y_GE65': '65+ años',
+                      'Total': 'Total'
+                    };
+                    return labels[value] || value;
+                  }}
+                />
+                <YAxis />
+                <Tooltip 
+                  labelFormatter={(value) => {
+                    const labels: {[key: string]: string} = {
+                      'Y_LT15': 'Menores de 15 años',
+                      'Y15-64': '15 a 64 años',
+                      'Y_GE65': '65 años o más',
+                      'Total': 'Total'
+                    };
+                    return labels[value] || value;
+                  }}
+                  formatter={(value) => [`${value}M`, 'Población']}
+                />
+                <Bar dataKey="population" fill="#F59E0B" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Population vs Labor Comparison */}
+      {populationLaborData.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Población vs Fuerza Laboral</CardTitle>
@@ -278,46 +383,7 @@ export const SimpleReports = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
-        {/* Age Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribución por Edad</CardTitle>
-            <CardDescription>Población por grupos etarios (millones)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={ageDistribution}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="age" 
-                  tickFormatter={(value) => {
-                    const labels: {[key: string]: string} = {
-                      'Y_LT15': '<15 años',
-                      'Y15-64': '15-64 años',
-                      'Y_GE65': '65+ años'
-                    };
-                    return labels[value] || value;
-                  }}
-                />
-                <YAxis />
-                <Tooltip 
-                  labelFormatter={(value) => {
-                    const labels: {[key: string]: string} = {
-                      'Y_LT15': 'Menores de 15 años',
-                      'Y15-64': '15 a 64 años',
-                      'Y_GE65': '65 años o más'
-                    };
-                    return labels[value] || value;
-                  }}
-                  formatter={(value) => [`${value}M`, 'Población']}
-                />
-                <Bar dataKey="population" fill="#F59E0B" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      )}
 
       {/* Detailed Data Table */}
       <Card>
