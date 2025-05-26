@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -97,11 +96,14 @@ export const EuropeVectorMap = () => {
       // Use predictions data
       const yearData = predictionsData.filter(item => item.time_period === year);
       console.log(`Prediction data for year ${year}:`, yearData.length, 'countries');
+      console.log('Sample prediction data:', yearData.slice(0, 3));
+      
       return yearData.map(prediction => {
         const geoInfo = geoData.find(geo => geo.geo === prediction.geo);
+        console.log(`Processing ${prediction.geo}: ${prediction.predicted_labour_force}`);
         return {
           geo: prediction.geo,
-          value: prediction.predicted_labour_force,
+          value: Number(prediction.predicted_labour_force) || 0,
           un_region: geoInfo?.un_region || 'Unknown',
           isHistorical: false
         };
@@ -113,7 +115,7 @@ export const EuropeVectorMap = () => {
   const isHistoricalView = historicalYears.length > 0 && selectedYear < transitionYear;
   
   console.log(`Current data for year ${selectedYear}:`, currentData.length, 'countries');
-  console.log('Countries with data:', currentData.map(d => d.geo));
+  console.log('Sample current data:', currentData.slice(0, 3));
 
   const values = currentData.map(d => d.value);
   const maxValue = Math.max(...values);
@@ -121,7 +123,7 @@ export const EuropeVectorMap = () => {
 
   const getCountryColor = (countryCode: string) => {
     const countryData = currentData.find(d => d.geo === countryCode);
-    if (!countryData) return '#e5e7eb'; // Gray for no data
+    if (!countryData || countryData.value === 0) return '#e5e7eb'; // Gray for no data
     
     const normalized = maxValue === minValue ? 0.5 : (countryData.value - minValue) / (maxValue - minValue);
     
@@ -149,6 +151,17 @@ export const EuropeVectorMap = () => {
     } else if (direction === 'next' && currentIndex < allYears.length - 1) {
       setSelectedYear(allYears[currentIndex + 1]);
     }
+  };
+
+  // Helper function to format the labor force value
+  const formatLaborForce = (value: number): string => {
+    if (value === 0) return 'Sin datos';
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(0)}K`;
+    }
+    return value.toString();
   };
 
   if (predictionsLoading || geoLoading) {
@@ -629,29 +642,37 @@ export const EuropeVectorMap = () => {
             </div>
           </div>
 
-          {/* Selected Country Info */}
+          {/* Selected Country Info - IMPROVED */}
           {selectedCountry && (
             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <h3 className="font-semibold text-lg mb-2 text-blue-900">{selectedCountry}</h3>
               {(() => {
                 const countryData = currentData.find(d => d.geo === selectedCountry);
+                console.log(`Selected country ${selectedCountry} data:`, countryData);
+                
                 if (!countryData) {
                   return (
                     <div className="text-sm text-gray-600">
-                      <div className="text-red-600 font-medium">Sin datos disponibles para este año</div>
+                      <div className="text-red-600 font-medium">Sin datos disponibles para este país en {selectedYear}</div>
                     </div>
                   );
                 }
                 
                 const label = isHistoricalView ? 'Fuerza Laboral Histórica' : 'Fuerza Laboral Predicha';
+                const formattedValue = formatLaborForce(countryData.value);
                 
                 return (
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">{label}:</span>
                       <div className="font-semibold text-lg text-blue-700">
-                        {(countryData.value / 1000000).toFixed(1)}M
+                        {formattedValue}
                       </div>
+                      {countryData.value > 0 && (
+                        <div className="text-xs text-gray-500">
+                          Valor exacto: {countryData.value.toLocaleString()}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <span className="text-gray-600">Región:</span>
@@ -678,7 +699,7 @@ export const EuropeVectorMap = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="text-sm text-gray-600">Países con Datos</div>
-                <div className="text-2xl font-bold text-blue-600">{currentData.length}</div>
+                <div className="text-2xl font-bold text-blue-600">{currentData.filter(d => d.value > 0).length}</div>
               </CardContent>
             </Card>
             <Card>
@@ -687,7 +708,7 @@ export const EuropeVectorMap = () => {
                   Total {isHistoricalView ? 'Histórico' : 'Predicho'}
                 </div>
                 <div className="text-2xl font-bold text-green-600">
-                  {(currentData.reduce((sum, d) => sum + d.value, 0) / 1000000).toFixed(0)}M
+                  {formatLaborForce(currentData.reduce((sum, d) => sum + d.value, 0))}
                 </div>
               </CardContent>
             </Card>
@@ -695,7 +716,7 @@ export const EuropeVectorMap = () => {
               <CardContent className="p-4">
                 <div className="text-sm text-gray-600">Promedio</div>
                 <div className="text-2xl font-bold text-amber-600">
-                  {currentData.length > 0 ? (currentData.reduce((sum, d) => sum + d.value, 0) / currentData.length / 1000000).toFixed(1) : '0'}M
+                  {currentData.length > 0 ? formatLaborForce(currentData.reduce((sum, d) => sum + d.value, 0) / currentData.filter(d => d.value > 0).length) : '0'}
                 </div>
               </CardContent>
             </Card>
