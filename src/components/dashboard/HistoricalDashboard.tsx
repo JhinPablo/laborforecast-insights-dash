@@ -1,67 +1,15 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area, ComposedChart } from 'recharts';
-import { TrendingUp, Users, Globe, Activity, Calendar, Briefcase } from 'lucide-react';
+import { useCSVData } from '@/hooks/useCSVData';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { TrendingUp, Users, Globe, Calendar } from 'lucide-react';
 
 export const HistoricalDashboard = () => {
-  const [laborData, setLaborData] = useState([]);
-  const [populationData, setPopulationData] = useState([]);
-  const [fertilityData, setFertilityData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: laborData, loading: laborLoading, error: laborError } = useCSVData('labor.csv');
+  const { data: populationData, loading: populationLoading, error: populationError } = useCSVData('population.csv');
 
-  useEffect(() => {
-    fetchHistoricalData();
-  }, []);
-
-  const fetchHistoricalData = async () => {
-    try {
-      console.log('Fetching historical data...');
-
-      // Fetch labor force data
-      const { data: labor, error: laborError } = await supabase
-        .from('labor')
-        .select('*')
-        .order('year');
-
-      if (laborError) {
-        console.error('Labor data error:', laborError);
-      }
-
-      // Fetch population data
-      const { data: population, error: populationError } = await supabase
-        .from('population')
-        .select('*')
-        .order('year');
-
-      if (populationError) {
-        console.error('Population data error:', populationError);
-      }
-
-      // Fetch fertility data
-      const { data: fertility, error: fertilityError } = await supabase
-        .from('fertility')
-        .select('*')
-        .order('year');
-
-      if (fertilityError) {
-        console.error('Fertility data error:', fertilityError);
-      }
-
-      console.log('Labor data count:', labor?.length || 0);
-      console.log('Population data count:', population?.length || 0);
-      console.log('Fertility data count:', fertility?.length || 0);
-
-      setLaborData(labor || []);
-      setPopulationData(population || []);
-      setFertilityData(fertility || []);
-    } catch (error) {
-      console.error('Error fetching historical data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = laborLoading || populationLoading;
 
   if (loading) {
     return (
@@ -71,129 +19,167 @@ export const HistoricalDashboard = () => {
     );
   }
 
-  // Process labor data for visualization
-  const processLaborData = () => {
-    const groupedByYear = laborData.reduce((acc: any, item: any) => {
-      const year = item.year;
-      if (!acc[year]) {
-        acc[year] = { year, total: 0, male: 0, female: 0, countries: new Set() };
+  if (laborError || populationError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">Error cargando datos:</p>
+          {laborError && <p className="text-sm text-gray-600">Labor: {laborError}</p>}
+          {populationError && <p className="text-sm text-gray-600">Population: {populationError}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  console.log('Labor data loaded:', laborData.length);
+  console.log('Population data loaded:', populationData.length);
+
+  // Process data for distribution by countries (using labor data)
+  const getCountryDistribution = () => {
+    const countryData = laborData.reduce((acc: any, item: any) => {
+      const country = item.geo;
+      if (!acc[country]) {
+        acc[country] = { country, totalLabor: 0, records: 0 };
       }
-      acc[year].total += item.labour_force || 0;
-      acc[year].countries.add(item.geo);
-      
-      if (item.sex === 'Males') acc[year].male += item.labour_force || 0;
-      if (item.sex === 'Females') acc[year].female += item.labour_force || 0;
-      
+      acc[country].totalLabor += Number(item.labour_force) || 0;
+      acc[country].records += 1;
       return acc;
     }, {});
 
-    return Object.values(groupedByYear)
+    return Object.values(countryData)
       .map((item: any) => ({
-        year: item.year,
-        total: (item.total / 1000).toFixed(1), // Convert to thousands
-        male: (item.male / 1000).toFixed(1),
-        female: (item.female / 1000).toFixed(1),
-        countries: item.countries.size
+        ...item,
+        avgLabor: (item.totalLabor / item.records).toFixed(1)
       }))
-      .sort((a: any, b: any) => a.year - b.year);
-  };
-
-  // Process population data
-  const processPopulationData = () => {
-    const groupedByYear = populationData.reduce((acc: any, item: any) => {
-      const year = item.year;
-      if (!acc[year]) {
-        acc[year] = { year, total: 0, countries: new Set() };
-      }
-      acc[year].total += item.population || 0;
-      acc[year].countries.add(item.geo);
-      return acc;
-    }, {});
-
-    return Object.values(groupedByYear)
-      .map((item: any) => ({
-        year: item.year,
-        population: (item.total / 1000000).toFixed(1), // Convert to millions
-        countries: item.countries.size
-      }))
-      .sort((a: any, b: any) => a.year - b.year);
-  };
-
-  // Process fertility data
-  const processFertilityData = () => {
-    const groupedByYear = fertilityData.reduce((acc: any, item: any) => {
-      const year = item.year;
-      if (!acc[year]) {
-        acc[year] = { year, totalRate: 0, count: 0, countries: new Set() };
-      }
-      acc[year].totalRate += item.fertility_rate || 0;
-      acc[year].count += 1;
-      acc[year].countries.add(item.geo);
-      return acc;
-    }, {});
-
-    return Object.values(groupedByYear)
-      .map((item: any) => ({
-        year: item.year,
-        fertility: (item.totalRate / item.count).toFixed(2),
-        countries: item.countries.size
-      }))
-      .sort((a: any, b: any) => a.year - b.year);
-  };
-
-  // Get top countries by labor force
-  const getTopCountriesByLabor = () => {
-    const countryTotals = laborData.reduce((acc: any, item: any) => {
-      if (!acc[item.geo]) {
-        acc[item.geo] = 0;
-      }
-      acc[item.geo] += item.labour_force || 0;
-      return acc;
-    }, {});
-
-    return Object.entries(countryTotals)
-      .map(([country, total]: any) => ({ country, total: (total / 1000).toFixed(1) }))
-      .sort((a: any, b: any) => b.total - a.total)
+      .sort((a: any, b: any) => Number(b.totalLabor) - Number(a.totalLabor))
       .slice(0, 10);
   };
 
-  const laborChartData = processLaborData();
-  const populationChartData = processPopulationData();
-  const fertilityChartData = processFertilityData();
-  const topCountries = getTopCountriesByLabor();
+  // Process data for population vs labor comparison
+  const getPopulationLaborComparison = () => {
+    const yearData = laborData.reduce((acc: any, item: any) => {
+      const year = item.year;
+      if (!acc[year]) {
+        acc[year] = { year, labor: 0, laborCount: 0 };
+      }
+      acc[year].labor += Number(item.labour_force) || 0;
+      acc[year].laborCount += 1;
+      return acc;
+    }, {});
 
-  // Calculate key metrics
-  const totalCountries = new Set([
-    ...laborData.map((item: any) => item.geo),
-    ...populationData.map((item: any) => item.geo),
-    ...fertilityData.map((item: any) => item.geo)
-  ]).size;
+    const populationByYear = populationData.reduce((acc: any, item: any) => {
+      const year = item.year;
+      if (!acc[year]) {
+        acc[year] = { population: 0, popCount: 0 };
+      }
+      acc[year].population += Number(item.population) || 0;
+      acc[year].popCount += 1;
+      return acc;
+    }, {});
 
+    return Object.keys(yearData)
+      .map(year => {
+        const laborInfo = yearData[year];
+        const popInfo = populationByYear[year] || { population: 0, popCount: 1 };
+        
+        return {
+          year: parseInt(year),
+          avgLabor: (laborInfo.labor / laborInfo.laborCount / 1000).toFixed(1),
+          avgPopulation: (popInfo.population / popInfo.popCount / 1000000).toFixed(1),
+          ratio: ((laborInfo.labor / laborInfo.laborCount) / (popInfo.population / popInfo.popCount) * 100).toFixed(1)
+        };
+      })
+      .filter(item => Number(item.avgPopulation) > 0)
+      .sort((a, b) => a.year - b.year)
+      .slice(0, 15);
+  };
+
+  // Gender distribution data from labor
+  const getGenderDistribution = () => {
+    const genderData = laborData.reduce((acc: any, item: any) => {
+      const sex = item.sex;
+      if (!acc[sex]) {
+        acc[sex] = 0;
+      }
+      acc[sex] += Number(item.labour_force) || 0;
+      return acc;
+    }, {});
+
+    return Object.entries(genderData).map(([sex, total]: any) => ({
+      sex: sex === 'Males' ? 'Hombres' : sex === 'Females' ? 'Mujeres' : 'Total',
+      total: (Number(total) / 1000000).toFixed(1),
+      value: Number(total)
+    })).filter(item => item.sex !== 'Total');
+  };
+
+  // Age distribution from population data
+  const getAgeDistribution = () => {
+    const ageData = populationData.reduce((acc: any, item: any) => {
+      const age = item.age;
+      if (!acc[age]) {
+        acc[age] = 0;
+      }
+      acc[age] += Number(item.population) || 0;
+      return acc;
+    }, {});
+
+    return Object.entries(ageData)
+      .map(([age, total]: any) => ({
+        age,
+        population: (Number(total) / 1000000).toFixed(1)
+      }))
+      .sort((a: any, b: any) => {
+        const ageOrder = ['Y_LT15', 'Y15-64', 'Y_GE65', 'TOTAL'];
+        return ageOrder.indexOf(a.age) - ageOrder.indexOf(b.age);
+      })
+      .filter(item => item.age !== 'TOTAL');
+  };
+
+  // Gender distribution from population data
+  const getPopulationGenderDistribution = () => {
+    const genderData = populationData.reduce((acc: any, item: any) => {
+      const sex = item.sex;
+      if (!acc[sex]) {
+        acc[sex] = 0;
+      }
+      acc[sex] += Number(item.population) || 0;
+      return acc;
+    }, {});
+
+    return Object.entries(genderData).map(([sex, total]: any) => ({
+      sex: sex === 'Males' ? 'Hombres' : sex === 'Females' ? 'Mujeres' : 'Total',
+      total: (Number(total) / 1000000).toFixed(1),
+      value: Number(total)
+    })).filter(item => item.sex !== 'Total');
+  };
+
+  const countryDistribution = getCountryDistribution();
+  const populationLaborData = getPopulationLaborComparison();
+  const genderDistribution = getGenderDistribution();
+  const populationGenderDistribution = getPopulationGenderDistribution();
+  const ageDistribution = getAgeDistribution();
+
+  const COLORS = ['#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6'];
+
+  // Calculate key statistics
+  const totalCountries = new Set(laborData.map((item: any) => item.geo)).size;
+  const totalYears = new Set(laborData.map((item: any) => item.year)).size;
   const totalLaborRecords = laborData.length;
   const totalPopulationRecords = populationData.length;
-  const totalFertilityRecords = fertilityData.length;
-
-  const yearRange = laborChartData.length > 0 
-    ? `${Math.min(...laborChartData.map((d: any) => d.year))}-${Math.max(...laborChartData.map((d: any) => d.year))}`
-    : 'N/A';
-
-  const avgFertility = fertilityChartData.length > 0
-    ? (fertilityChartData.reduce((sum: number, item: any) => sum + parseFloat(item.fertility), 0) / fertilityChartData.length).toFixed(2)
-    : '0';
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Histórico</h1>
-        <p className="text-lg text-gray-600">Análisis de datos demográficos y laborales europeos</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Datos Históricos</h1>
+        <p className="text-lg text-gray-600">Análisis y distribución de datos demográficos y laborales</p>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* Key Statistics */}
+      <div className="grid md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Países</CardTitle>
+            <CardTitle className="text-sm font-medium">Países Analizados</CardTitle>
             <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -204,23 +190,23 @@ export const HistoricalDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Años</CardTitle>
+            <CardTitle className="text-sm font-medium">Años de Datos</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{yearRange}</div>
-            <p className="text-xs text-muted-foreground">Período analizado</p>
+            <div className="text-2xl font-bold">{totalYears}</div>
+            <p className="text-xs text-muted-foreground">Período cubierto</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Datos Laborales</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalLaborRecords.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Registros históricos</p>
+            <p className="text-xs text-muted-foreground">Registros totales</p>
           </CardContent>
         </Card>
 
@@ -234,148 +220,167 @@ export const HistoricalDashboard = () => {
             <p className="text-xs text-muted-foreground">Registros demográficos</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Fertilidad</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalFertilityRecords.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Registros natalidad</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Fertilidad Media</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgFertility}</div>
-            <p className="text-xs text-muted-foreground">Tasa promedio</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Main Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Labor Force Evolution */}
+        {/* Country Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Evolución de la Fuerza Laboral</CardTitle>
-            <CardDescription>Fuerza laboral histórica por género (en miles)</CardDescription>
+            <CardTitle>Distribución por Países</CardTitle>
+            <CardDescription>Top 10 países por fuerza laboral total acumulada</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={laborChartData}>
+              <BarChart data={countryDistribution}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
+                <XAxis dataKey="country" angle={-45} textAnchor="end" height={80} />
                 <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="male" stroke="#3B82F6" name="Hombres" />
-                <Line type="monotone" dataKey="female" stroke="#EC4899" name="Mujeres" />
-                <Line type="monotone" dataKey="total" stroke="#10B981" name="Total" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Population Trends */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tendencias Poblacionales</CardTitle>
-            <CardDescription>Población total por año (en millones)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={populationChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis />
-                <Tooltip />
-                <Area 
-                  type="monotone" 
-                  dataKey="population" 
-                  stroke="#8B5CF6" 
-                  fill="#8B5CF6" 
-                  fillOpacity={0.6}
-                  name="Población (millones)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Fertility Rates */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tasas de Fertilidad</CardTitle>
-            <CardDescription>Evolución de las tasas de fertilidad promedio</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={fertilityChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="fertility" fill="#F59E0B" name="Tasa de Fertilidad" />
+                <Tooltip formatter={(value) => [`${Number(value).toLocaleString()}`, 'Fuerza Laboral']} />
+                <Bar dataKey="totalLabor" fill="#3B82F6" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Top Countries */}
+        {/* Population Gender Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Principales Países por Fuerza Laboral</CardTitle>
-            <CardDescription>Total acumulado histórico (en miles)</CardDescription>
+            <CardTitle>Distribución Poblacional por Género</CardTitle>
+            <CardDescription>Población total por género (millones)</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {topCountries.map((country: any, index) => (
-                <div key={country.country} className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-500">#{index + 1}</span>
-                    <span className="text-sm font-medium">{country.country}</span>
-                  </div>
-                  <span className="text-sm text-gray-600 font-mono">{country.total}K</span>
-                </div>
-              ))}
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={populationGenderDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ sex, total }) => `${sex}: ${total}M`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {populationGenderDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [(Number(value) / 1000000).toFixed(1) + 'M', 'Población']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Labor Gender Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribución Laboral por Género</CardTitle>
+            <CardDescription>Fuerza laboral total por género (millones)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={genderDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ sex, total }) => `${sex}: ${total}M`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {genderDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [(Number(value) / 1000000).toFixed(1) + 'M', 'Fuerza Laboral']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Age Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribución por Edad</CardTitle>
+            <CardDescription>Población por grupos etarios (millones)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={ageDistribution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="age" 
+                  tickFormatter={(value) => {
+                    const labels: {[key: string]: string} = {
+                      'Y_LT15': '<15 años',
+                      'Y15-64': '15-64 años',
+                      'Y_GE65': '65+ años',
+                      'Total': 'Total'
+                    };
+                    return labels[value] || value;
+                  }}
+                />
+                <YAxis />
+                <Tooltip 
+                  labelFormatter={(value) => {
+                    const labels: {[key: string]: string} = {
+                      'Y_LT15': 'Menores de 15 años',
+                      'Y15-64': '15 a 64 años',
+                      'Y_GE65': '65 años o más',
+                      'Total': 'Total'
+                    };
+                    return labels[value] || value;
+                  }}
+                  formatter={(value) => [`${value}M`, 'Población']}
+                />
+                <Bar dataKey="population" fill="#F59E0B" />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Combined Analysis */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Análisis Combinado: Fuerza Laboral vs Fertilidad</CardTitle>
-          <CardDescription>Comparación de tendencias demográficas clave</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <ComposedChart data={laborChartData.map((labor: any) => {
-              const fertility = fertilityChartData.find((f: any) => f.year === labor.year);
-              return {
-                ...labor,
-                fertility: fertility ? parseFloat(fertility.fertility) : null
-              };
-            })}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip />
-              <Legend />
-              <Bar yAxisId="left" dataKey="total" fill="#3B82F6" name="Fuerza Laboral Total (miles)" />
-              <Line yAxisId="right" type="monotone" dataKey="fertility" stroke="#EF4444" strokeWidth={3} name="Tasa de Fertilidad" />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* Population vs Labor Comparison */}
+      {populationLaborData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Población vs Fuerza Laboral</CardTitle>
+            <CardDescription>Comparación temporal (promedios por año)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={populationLaborData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="year" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Area 
+                  type="monotone" 
+                  dataKey="avgPopulation" 
+                  stackId="1" 
+                  stroke="#8B5CF6" 
+                  fill="#8B5CF6" 
+                  fillOpacity={0.6}
+                  name="Población Promedio (M)" 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="avgLabor" 
+                  stackId="2" 
+                  stroke="#10B981" 
+                  fill="#10B981" 
+                  fillOpacity={0.8}
+                  name="Fuerza Laboral Promedio (K)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

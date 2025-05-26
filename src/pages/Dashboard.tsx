@@ -9,6 +9,7 @@ import { GoldPlan } from '@/components/dashboard/GoldPlan';
 import { HistoricalDashboard } from '@/components/dashboard/HistoricalDashboard';
 import { SimpleReports } from '@/components/dashboard/SimpleReports';
 import { PredictionsReports } from '@/components/dashboard/PredictionsReports';
+import { ReportsSection } from '@/components/dashboard/ReportsSection';
 
 export const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -33,13 +34,13 @@ export const Dashboard = () => {
   const renderSectionContent = () => {
     switch (activeSection) {
       case 'dashboard':
-        // Dashboard histórico con datos reales de labor, población, fertilidad
+        // Dashboard con todos los datos históricos y visualizaciones
         return <HistoricalDashboard />;
       case 'reports':
-        // Reportes sencillos con datos históricos solamente
-        return <SimpleReports />;
+        // Nueva sección de reportes con PDFs y descargas CSV
+        return <ReportsSection />;
       case 'predictions':
-        // Predicciones y mapa interactivo mejorado
+        // Predicciones y mapa interactivo
         return <PredictionsReports />;
       default:
         return <HistoricalDashboard />;
