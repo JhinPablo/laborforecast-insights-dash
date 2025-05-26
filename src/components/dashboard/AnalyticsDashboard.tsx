@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useCSVData } from '@/hooks/useCSVData';
 import { useCSVExport } from '@/hooks/useCSVExport';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area, ScatterPlot, Scatter } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from 'recharts';
 import { TrendingUp, Users, Globe, BarChart3, Activity, Download, MapPin } from 'lucide-react';
 import { InteractiveMap } from './InteractiveMap';
 import { BasicReport } from './BasicReport';
@@ -72,7 +73,7 @@ export const AnalyticsDashboard = () => {
 
   const processCountryTrends = () => {
     const countries = [...new Set(predictionsData.map((item: any) => item.geo))];
-    return countries.slice(0, 10).map(country => {
+    return countries.map(country => {
       const countryData = predictionsData
         .filter((item: any) => item.geo === country)
         .sort((a: any, b: any) => a.time_period - b.time_period);
@@ -88,7 +89,7 @@ export const AnalyticsDashboard = () => {
         dataPoints: countryData.length,
         trendColor: trend > 0 ? "#10B981" : "#EF4444"
       };
-    });
+    }).sort((a: any, b: any) => b.latest - a.latest);
   };
 
   const timeSeriesData = processTimeSeriesData();
@@ -219,7 +220,7 @@ export const AnalyticsDashboard = () => {
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle>Country Trends Analysis</CardTitle>
-                  <CardDescription>Labor force trend comparison across top countries</CardDescription>
+                  <CardDescription>Labor force trend comparison across all countries</CardDescription>
                 </div>
                 <Button onClick={handleExportCountryTrends} variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
@@ -230,16 +231,16 @@ export const AnalyticsDashboard = () => {
             <CardContent>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-semibold mb-3">Trend Direction</h3>
+                  <h3 className="font-semibold mb-3">Trend Direction (Top 20)</h3>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={countryTrends}>
+                    <BarChart data={countryTrends.slice(0, 20)}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="country" angle={-45} textAnchor="end" height={100} />
                       <YAxis />
                       <Tooltip />
                       <Bar 
                         dataKey="trend" 
-                        fill={(entry: any) => entry.trend > 0 ? "#10B981" : "#EF4444"}
+                        fill="#3B82F6"
                         name="Trend"
                       />
                     </BarChart>
@@ -247,11 +248,9 @@ export const AnalyticsDashboard = () => {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-3">Latest Predictions</h3>
+                  <h3 className="font-semibold mb-3">Latest Predictions (Todos los países)</h3>
                   <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {countryTrends
-                      .sort((a: any, b: any) => b.latest - a.latest)
-                      .map((country: any, index) => (
+                    {countryTrends.map((country: any, index) => (
                       <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                         <div>
                           <div className="font-medium">{country.country}</div>
