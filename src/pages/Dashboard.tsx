@@ -7,6 +7,7 @@ import { Navigate } from 'react-router-dom';
 import { FreePlan } from '@/components/dashboard/FreePlan';
 import { SilverPlan } from '@/components/dashboard/SilverPlan';
 import { GoldPlan } from '@/components/dashboard/GoldPlan';
+import { HistoricalDashboard } from '@/components/dashboard/HistoricalDashboard';
 import { AnalyticsDashboard } from '@/components/dashboard/AnalyticsDashboard';
 import { EuropeMap } from '@/components/dashboard/EuropeMap';
 
@@ -30,25 +31,19 @@ export const Dashboard = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  const renderPlanContent = () => {
-    switch (profile?.subscription_plan) {
-      case 'silver':
-        return <SilverPlan />;
-      case 'gold':
-        return <GoldPlan />;
-      default:
-        return <FreePlan />;
-    }
-  };
-
   const renderSectionContent = () => {
     switch (activeSection) {
+      case 'dashboard':
+        // Dashboard histórico con datos reales de labor, población, fertilidad
+        return <HistoricalDashboard />;
       case 'reports':
+        // Reportes y análisis avanzados
         return <AnalyticsDashboard />;
       case 'predictions':
+        // Predicciones y mapa interactivo
         return <EuropeMap />;
       default:
-        return renderPlanContent();
+        return <HistoricalDashboard />;
     }
   };
 

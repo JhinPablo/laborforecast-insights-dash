@@ -4,84 +4,156 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useCSVData } from '@/hooks/useCSVData';
-import { MapPin, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { MapPin, Play, Pause, ChevronLeft, ChevronRight, TrendingUp, History } from 'lucide-react';
 
 interface CountryMarker {
   geo: string;
   latitude: number;
   longitude: number;
-  predicted_labour_force: number;
+  labour_force: number;
+  predicted_labour_force?: number;
   un_region: string;
+  isHistorical: boolean;
 }
 
 export const EuropeMap = () => {
   const { data: predictionsData, loading: predictionsLoading } = useCSVData('predictions.csv');
   const { data: geoData, loading: geoLoading } = useCSVData('geo_data.csv');
   
-  const [selectedYear, setSelectedYear] = useState(2025);
+  const [laborData, setLaborData] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(2020);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
-  const years = [...new Set(predictionsData.map(item => item.time_period))].sort();
-  const minYear = Math.min(...years);
-  const maxYear = Math.max(...years);
+  useEffect(() => {
+    fetchLaborData();
+  }, []);
+
+  const fetchLaborData = async () => {
+    try {
+      const { data: labor } = await supabase
+        .from('labor')
+        .select('*')
+        .order('year');
+      
+      console.log('Labor data fetched:', labor?.length || 0);
+      setLaborData(labor || []);
+    } catch (error) {
+      console.error('Error fetching labor data:', error);
+    }
+  };
+
+  // Combine historical and prediction years
+  const historicalYears = [...new Set(laborData.map((item: any) => item.year))].sort();
+  const predictionYears = [...new Set(predictionsData.map(item => item.time_period))].sort();
+  const allYears = [...new Set([...historicalYears, ...predictionYears])].sort();
+  
+  const minYear = Math.min(...allYears);
+  const maxYear = Math.max(...allYears);
+  const transitionYear = Math.max(...historicalYears) + 1; // First prediction year
 
   // Auto-play functionality
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isPlaying && years.length > 0) {
+    if (isPlaying && allYears.length > 0) {
       interval = setInterval(() => {
         setSelectedYear(prev => {
-          const currentIndex = years.indexOf(prev);
+          const currentIndex = allYears.indexOf(prev);
           const nextIndex = currentIndex + 1;
-          return nextIndex >= years.length ? years[0] : years[nextIndex];
+          return nextIndex >= allYears.length ? allYears[0] : allYears[nextIndex];
         });
       }, 1500);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, years]);
+  }, [isPlaying, allYears]);
 
   const getMarkersForYear = (year: number): CountryMarker[] => {
-    const yearData = predictionsData.filter(item => item.time_period === year);
-    return yearData.map(prediction => {
-      const geoInfo = geoData.find(geo => geo.geo === prediction.geo);
-      return {
-        geo: prediction.geo,
-        latitude: geoInfo?.latitude || 0,
-        longitude: geoInfo?.longitude || 0,
-        predicted_labour_force: prediction.predicted_labour_force,
-        un_region: geoInfo?.un_region || 'Unknown'
-      };
-    }).filter(marker => marker.latitude !== 0 && marker.longitude !== 0);
+    const isHistorical = year < transitionYear;
+    
+    if (isHistorical) {
+      // Use historical labor data
+      const yearData = laborData.filter((item: any) => item.year === year);
+      
+      // Group by country and sum male/female data
+      const countryTotals = yearData.reduce((acc: any, item: any) => {
+        const country = item.geo;
+        if (!acc[country]) {
+          acc[country] = 0;
+        }
+        acc[country] += item.labour_force || 0;
+        return acc;
+      }, {});
+
+      return Object.entries(countryTotals).map(([country, total]: any) => {
+        const geoInfo = geoData.find(geo => geo.geo === country);
+        return {
+          geo: country,
+          latitude: geoInfo?.latitude || 0,
+          longitude: geoInfo?.longitude || 0,
+          labour_force: total,
+          un_region: geoInfo?.un_region || 'Unknown',
+          isHistorical: true
+        };
+      }).filter(marker => marker.latitude !== 0 && marker.longitude !== 0);
+    } else {
+      // Use prediction data
+      const yearData = predictionsData.filter(item => item.time_period === year);
+      return yearData.map(prediction => {
+        const geoInfo = geoData.find(geo => geo.geo === prediction.geo);
+        return {
+          geo: prediction.geo,
+          latitude: geoInfo?.latitude || 0,
+          longitude: geoInfo?.longitude || 0,
+          labour_force: 0,
+          predicted_labour_force: prediction.predicted_labour_force,
+          un_region: geoInfo?.un_region || 'Unknown',
+          isHistorical: false
+        };
+      }).filter(marker => marker.latitude !== 0 && marker.longitude !== 0);
+    }
   };
 
   const currentMarkers = getMarkersForYear(selectedYear);
-  const maxValue = Math.max(...currentMarkers.map(m => m.predicted_labour_force));
-  const minValue = Math.min(...currentMarkers.map(m => m.predicted_labour_force));
+  const isHistoricalView = selectedYear < transitionYear;
+  
+  const values = currentMarkers.map(m => 
+    isHistoricalView ? m.labour_force : (m.predicted_labour_force || 0)
+  );
+  const maxValue = Math.max(...values);
+  const minValue = Math.min(...values);
 
   const getMarkerSize = (value: number) => {
+    if (maxValue === minValue) return 15;
     const normalized = (value - minValue) / (maxValue - minValue);
-    return Math.max(6, normalized * 25);
+    return Math.max(8, normalized * 30);
   };
 
   const getMarkerColor = (value: number) => {
+    if (maxValue === minValue) return '#3B82F6';
     const normalized = (value - minValue) / (maxValue - minValue);
-    if (normalized > 0.7) return '#059669'; // green-600
-    if (normalized > 0.4) return '#d97706'; // amber-600
-    return '#dc2626'; // red-600
+    
+    if (isHistoricalView) {
+      // Blue tones for historical data
+      if (normalized > 0.7) return '#1E40AF'; // blue-800
+      if (normalized > 0.4) return '#3B82F6'; // blue-600
+      return '#60A5FA'; // blue-400
+    } else {
+      // Green tones for predictions
+      if (normalized > 0.7) return '#059669'; // green-600
+      if (normalized > 0.4) return '#10B981'; // green-500
+      return '#34D399'; // green-400
+    }
   };
 
   // Convert lat/lng to SVG coordinates for Europe-focused projection
   const projectToEurope = (lat: number, lng: number) => {
-    // Europe bounds: roughly 35-71°N, -11-40°E
     const minLat = 35, maxLat = 71;
     const minLng = -11, maxLng = 40;
     
-    // Clamp coordinates to Europe bounds
     const clampedLat = Math.max(minLat, Math.min(maxLat, lat));
     const clampedLng = Math.max(minLng, Math.min(maxLng, lng));
     
-    // Project to SVG coordinates (800x600)
     const x = ((clampedLng - minLng) / (maxLng - minLng)) * 800;
     const y = ((maxLat - clampedLat) / (maxLat - minLat)) * 600;
     
@@ -89,11 +161,11 @@ export const EuropeMap = () => {
   };
 
   const handleYearChange = (direction: 'prev' | 'next') => {
-    const currentIndex = years.indexOf(selectedYear);
+    const currentIndex = allYears.indexOf(selectedYear);
     if (direction === 'prev' && currentIndex > 0) {
-      setSelectedYear(years[currentIndex - 1]);
-    } else if (direction === 'next' && currentIndex < years.length - 1) {
-      setSelectedYear(years[currentIndex + 1]);
+      setSelectedYear(allYears[currentIndex - 1]);
+    } else if (direction === 'next' && currentIndex < allYears.length - 1) {
+      setSelectedYear(allYears[currentIndex + 1]);
     }
   };
 
@@ -112,13 +184,35 @@ export const EuropeMap = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5" />
-          Mapa Interactivo de Predicciones de Fuerza Laboral Europea
+          Mapa Temporal de Fuerza Laboral Europea
         </CardTitle>
         <CardDescription>
-          Explora las predicciones de fuerza laboral en países europeos a través del tiempo
+          Datos históricos ({Math.min(...historicalYears)}-{Math.max(...historicalYears)}) y predicciones ({Math.min(...predictionYears)}-{Math.max(...predictionYears)})
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Data Type Indicator */}
+        <div className="mb-4 p-3 rounded-lg border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isHistoricalView ? (
+                <>
+                  <History className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-600">Datos Históricos</span>
+                </>
+              ) : (
+                <>
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-600">Predicciones</span>
+                </>
+              )}
+            </div>
+            <div className="text-xs text-gray-500">
+              Transición en {transitionYear}
+            </div>
+          </div>
+        </div>
+
         {/* Time Controls */}
         <div className="mb-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -127,7 +221,7 @@ export const EuropeMap = () => {
                 variant="outline"
                 size="icon"
                 onClick={() => handleYearChange('prev')}
-                disabled={years.indexOf(selectedYear) === 0}
+                disabled={allYears.indexOf(selectedYear) === 0}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -144,7 +238,7 @@ export const EuropeMap = () => {
                 variant="outline"
                 size="icon"
                 onClick={() => handleYearChange('next')}
-                disabled={years.indexOf(selectedYear) === years.length - 1}
+                disabled={allYears.indexOf(selectedYear) === allYears.length - 1}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -152,7 +246,9 @@ export const EuropeMap = () => {
             
             <div className="text-center">
               <div className="text-3xl font-bold text-blue-600">{selectedYear}</div>
-              <div className="text-sm text-gray-600">Año Seleccionado</div>
+              <div className="text-sm text-gray-600">
+                {isHistoricalView ? 'Datos Históricos' : 'Predicción'}
+              </div>
             </div>
           </div>
 
@@ -160,6 +256,7 @@ export const EuropeMap = () => {
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-gray-600">
               <span>{minYear}</span>
+              <span className="text-xs text-gray-400">Transición: {transitionYear}</span>
               <span>{maxYear}</span>
             </div>
             <Slider
@@ -175,11 +272,8 @@ export const EuropeMap = () => {
 
         {/* Europe Map Container */}
         <div className="relative bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg h-96 overflow-hidden border-2 border-blue-200">
-          <svg 
-            viewBox="0 0 800 600" 
-            className="w-full h-full"
-          >
-            {/* Background with European-style gradient */}
+          <svg viewBox="0 0 800 600" className="w-full h-full">
+            {/* Background */}
             <defs>
               <linearGradient id="europeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" style={{stopColor:"#e0f2fe", stopOpacity:1}} />
@@ -196,8 +290,9 @@ export const EuropeMap = () => {
             {/* Country markers */}
             {currentMarkers.map((marker, index) => {
               const { x, y } = projectToEurope(marker.latitude, marker.longitude);
-              const size = getMarkerSize(marker.predicted_labour_force);
-              const color = getMarkerColor(marker.predicted_labour_force);
+              const value = isHistoricalView ? marker.labour_force : (marker.predicted_labour_force || 0);
+              const size = getMarkerSize(value);
+              const color = getMarkerColor(value);
               
               return (
                 <g key={`${marker.geo}-${index}`}>
@@ -239,19 +334,21 @@ export const EuropeMap = () => {
 
           {/* Map Legend */}
           <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 border">
-            <div className="text-sm font-semibold mb-3 text-gray-800">Escala de Fuerza Laboral</div>
+            <div className="text-sm font-semibold mb-3 text-gray-800">
+              {isHistoricalView ? 'Fuerza Laboral Histórica' : 'Predicciones de Fuerza Laboral'}
+            </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs">
-                <div className="w-4 h-4 rounded-full bg-red-600"></div>
-                <span>Baja ({minValue.toFixed(1)}M)</span>
+                <div className={`w-4 h-4 rounded-full ${isHistoricalView ? 'bg-blue-400' : 'bg-green-400'}`}></div>
+                <span>Baja ({(minValue / (isHistoricalView ? 1 : 1)).toFixed(1)}{isHistoricalView ? 'K' : 'M'})</span>
               </div>
               <div className="flex items-center gap-2 text-xs">
-                <div className="w-4 h-4 rounded-full bg-amber-600"></div>
+                <div className={`w-4 h-4 rounded-full ${isHistoricalView ? 'bg-blue-600' : 'bg-green-500'}`}></div>
                 <span>Media</span>
               </div>
               <div className="flex items-center gap-2 text-xs">
-                <div className="w-4 h-4 rounded-full bg-green-600"></div>
-                <span>Alta ({maxValue.toFixed(1)}M)</span>
+                <div className={`w-4 h-4 rounded-full ${isHistoricalView ? 'bg-blue-800' : 'bg-green-600'}`}></div>
+                <span>Alta ({(maxValue / (isHistoricalView ? 1 : 1)).toFixed(1)}{isHistoricalView ? 'K' : 'M'})</span>
               </div>
             </div>
           </div>
@@ -259,6 +356,9 @@ export const EuropeMap = () => {
           {/* Map Title */}
           <div className="absolute top-4 left-4 bg-white/90 rounded-lg px-3 py-2 shadow-md">
             <div className="text-sm font-semibold text-gray-800">Europa - {selectedYear}</div>
+            <div className="text-xs text-gray-600">
+              {isHistoricalView ? 'Datos Reales' : 'Predicción'}
+            </div>
           </div>
         </div>
 
@@ -270,12 +370,16 @@ export const EuropeMap = () => {
               const countryData = currentMarkers.find(m => m.geo === selectedCountry);
               if (!countryData) return null;
               
+              const value = isHistoricalView ? countryData.labour_force : (countryData.predicted_labour_force || 0);
+              const unit = isHistoricalView ? 'K' : 'M';
+              const label = isHistoricalView ? 'Fuerza Laboral Histórica' : 'Fuerza Laboral Predicha';
+              
               return (
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-600">Fuerza Laboral Predicha:</span>
+                    <span className="text-gray-600">{label}:</span>
                     <div className="font-semibold text-lg text-blue-700">
-                      {countryData.predicted_labour_force.toFixed(1)}M
+                      {(value / (isHistoricalView ? 1 : 1)).toFixed(1)}{unit}
                     </div>
                   </div>
                   <div>
@@ -283,9 +387,9 @@ export const EuropeMap = () => {
                     <div className="font-medium text-gray-800">{countryData.un_region}</div>
                   </div>
                   <div>
-                    <span className="text-gray-600">Coordenadas:</span>
-                    <div className="font-mono text-xs text-gray-600">
-                      {countryData.latitude.toFixed(2)}, {countryData.longitude.toFixed(2)}
+                    <span className="text-gray-600">Tipo de Datos:</span>
+                    <div className="font-medium text-gray-800">
+                      {isHistoricalView ? 'Históricos' : 'Predicción'}
                     </div>
                   </div>
                   <div>
@@ -308,9 +412,14 @@ export const EuropeMap = () => {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-sm text-gray-600">Total Predicho</div>
+              <div className="text-sm text-gray-600">
+                Total {isHistoricalView ? 'Histórico' : 'Predicho'}
+              </div>
               <div className="text-2xl font-bold text-green-600">
-                {currentMarkers.reduce((sum, m) => sum + m.predicted_labour_force, 0).toFixed(1)}M
+                {currentMarkers.reduce((sum, m) => {
+                  const value = isHistoricalView ? m.labour_force : (m.predicted_labour_force || 0);
+                  return sum + value;
+                }, 0).toFixed(1)}{isHistoricalView ? 'K' : 'M'}
               </div>
             </CardContent>
           </Card>
@@ -318,7 +427,10 @@ export const EuropeMap = () => {
             <CardContent className="p-4">
               <div className="text-sm text-gray-600">Promedio</div>
               <div className="text-2xl font-bold text-amber-600">
-                {(currentMarkers.reduce((sum, m) => sum + m.predicted_labour_force, 0) / currentMarkers.length).toFixed(1)}M
+                {(currentMarkers.reduce((sum, m) => {
+                  const value = isHistoricalView ? m.labour_force : (m.predicted_labour_force || 0);
+                  return sum + value;
+                }, 0) / currentMarkers.length).toFixed(1)}{isHistoricalView ? 'K' : 'M'}
               </div>
             </CardContent>
           </Card>
