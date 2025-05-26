@@ -120,7 +120,8 @@ export const usePDFGeneration = () => {
 
     pdf.setFontSize(10);
     Object.entries(genderLabor).forEach(([sex, total]: any, index) => {
-      const percentage = ((total / Object.values(genderLabor).reduce((sum: number, val: number) => sum + val, 0)) * 100).toFixed(1);
+      const totalSum = Object.values(genderLabor).reduce((sum: number, val: number) => sum + val, 0);
+      const percentage = ((total / totalSum) * 100).toFixed(1);
       pdf.text(`• ${sex === 'Males' ? 'Hombres' : 'Mujeres'}: ${(total / 1000000).toFixed(1)}M (${percentage}%)`, 25, 80 + (index * 10));
     });
 
