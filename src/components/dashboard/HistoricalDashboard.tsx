@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCSVData } from '@/hooks/useCSVData';
@@ -112,7 +111,7 @@ export const HistoricalDashboard = () => {
     })).filter(item => item.sex !== 'Total');
   };
 
-  // Age distribution from population data
+  // Age distribution from population data - FIXED
   const getAgeDistribution = () => {
     const ageData = populationData.reduce((acc: any, item: any) => {
       const age = item.age;
@@ -123,16 +122,50 @@ export const HistoricalDashboard = () => {
       return acc;
     }, {});
 
+    // Filter out unwanted age groups and sort properly
+    const validAgeGroups = ['Y_LT5', 'Y5-9', 'Y10-14', 'Y_LT15', 'Y15-19', 'Y20-24', 'Y25-29', 'Y30-34', 'Y35-39', 'Y40-44', 'Y45-49', 'Y50-54', 'Y55-59', 'Y60-64', 'Y15-64', 'Y65-69', 'Y70-74', 'Y75-79', 'Y80-84', 'Y_GE85', 'Y_GE65'];
+    
     return Object.entries(ageData)
+      .filter(([age, total]) => validAgeGroups.includes(age) && age !== 'TOTAL' && age !== 'UNK')
       .map(([age, total]: any) => ({
         age,
-        population: (Number(total) / 1000000).toFixed(1)
+        population: (Number(total) / 1000000).toFixed(1),
+        ageLabel: getAgeLabel(age)
       }))
       .sort((a: any, b: any) => {
-        const ageOrder = ['Y_LT15', 'Y15-64', 'Y_GE65', 'TOTAL'];
+        // Custom sort to put Y_LT5 first, then logical order
+        const ageOrder = ['Y_LT5', 'Y5-9', 'Y10-14', 'Y_LT15', 'Y15-19', 'Y20-24', 'Y25-29', 'Y30-34', 'Y35-39', 'Y40-44', 'Y45-49', 'Y50-54', 'Y55-59', 'Y60-64', 'Y15-64', 'Y65-69', 'Y70-74', 'Y75-79', 'Y80-84', 'Y_GE85', 'Y_GE65'];
         return ageOrder.indexOf(a.age) - ageOrder.indexOf(b.age);
       })
-      .filter(item => item.age !== 'TOTAL');
+      .slice(0, 12); // Limit to most relevant age groups
+  };
+
+  // Helper function for age labels
+  const getAgeLabel = (age: string): string => {
+    const labels: {[key: string]: string} = {
+      'Y_LT5': '<5 años',
+      'Y5-9': '5-9 años',
+      'Y10-14': '10-14 años',
+      'Y_LT15': '<15 años',
+      'Y15-19': '15-19 años',
+      'Y20-24': '20-24 años',
+      'Y25-29': '25-29 años',
+      'Y30-34': '30-34 años',
+      'Y35-39': '35-39 años',
+      'Y40-44': '40-44 años',
+      'Y45-49': '45-49 años',
+      'Y50-54': '50-54 años',
+      'Y55-59': '55-59 años',
+      'Y60-64': '60-64 años',
+      'Y15-64': '15-64 años',
+      'Y65-69': '65-69 años',
+      'Y70-74': '70-74 años',
+      'Y75-79': '75-79 años',
+      'Y80-84': '80-84 años',
+      'Y_GE85': '85+ años',
+      'Y_GE65': '65+ años'
+    };
+    return labels[age] || age;
   };
 
   // Gender distribution from population data
@@ -308,7 +341,7 @@ export const HistoricalDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Age Distribution */}
+        {/* Age Distribution - FIXED */}
         <Card>
           <CardHeader>
             <CardTitle>Distribución por Edad</CardTitle>
@@ -319,27 +352,18 @@ export const HistoricalDashboard = () => {
               <BarChart data={ageDistribution}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
-                  dataKey="age" 
-                  tickFormatter={(value) => {
-                    const labels: {[key: string]: string} = {
-                      'Y_LT15': '<15 años',
-                      'Y15-64': '15-64 años',
-                      'Y_GE65': '65+ años',
-                      'Total': 'Total'
-                    };
-                    return labels[value] || value;
-                  }}
+                  dataKey="ageLabel"
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={80}
                 />
                 <YAxis />
                 <Tooltip 
-                  labelFormatter={(value) => {
-                    const labels: {[key: string]: string} = {
-                      'Y_LT15': 'Menores de 15 años',
-                      'Y15-64': '15 a 64 años',
-                      'Y_GE65': '65 años o más',
-                      'Total': 'Total'
-                    };
-                    return labels[value] || value;
+                  labelFormatter={(value, payload) => {
+                    if (payload && payload[0]) {
+                      return payload[0].payload.ageLabel;
+                    }
+                    return value;
                   }}
                   formatter={(value) => [`${value}M`, 'Población']}
                 />

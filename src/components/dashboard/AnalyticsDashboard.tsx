@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,24 +27,51 @@ export const AnalyticsDashboard = () => {
     );
   }
 
+  console.log('Predictions data loaded:', predictionsData.length);
+  console.log('Sample prediction data:', predictionsData[0]);
+
+  // FIXED: Process time series data with proper validation
   const processTimeSeriesData = () => {
+    if (!predictionsData || predictionsData.length === 0) {
+      console.log('No predictions data available');
+      return [];
+    }
+
     const groupedByYear = predictionsData.reduce((acc: any, item: any) => {
-      if (!acc[item.time_period]) {
-        acc[item.time_period] = { year: item.time_period, total: 0, count: 0 };
+      const year = item.time_period;
+      const laborForce = Number(item.predicted_labour_force);
+      
+      if (!year || isNaN(laborForce)) {
+        return acc;
       }
-      acc[item.time_period].total += item.predicted_labour_force;
-      acc[item.time_period].count += 1;
+      
+      if (!acc[year]) {
+        acc[year] = { year, total: 0, count: 0, values: [] };
+      }
+      acc[year].total += laborForce;
+      acc[year].count += 1;
+      acc[year].values.push(laborForce);
       return acc;
     }, {});
 
-    return Object.values(groupedByYear).map((item: any) => ({
+    const result = Object.values(groupedByYear).map((item: any) => ({
       year: item.year,
       average: (item.total / item.count).toFixed(2),
-      total: item.total.toFixed(2)
-    }));
+      total: item.total.toFixed(2),
+      count: item.count
+    })).sort((a: any, b: any) => a.year - b.year);
+
+    console.log('Processed time series data:', result);
+    return result;
   };
 
+  // FIXED: Process regional data with better error handling
   const processRegionalData = () => {
+    if (!predictionsData || !geoData || predictionsData.length === 0 || geoData.length === 0) {
+      console.log('Missing data for regional processing');
+      return [];
+    }
+
     const merged = predictionsData.map((pred: any) => {
       const geo = geoData.find((g: any) => g.geo === pred.geo);
       return {
@@ -53,12 +81,19 @@ export const AnalyticsDashboard = () => {
     });
 
     const groupedByRegion = merged.reduce((acc: any, item: any) => {
-      if (!acc[item.un_region]) {
-        acc[item.un_region] = { region: item.un_region, total: 0, count: 0, countries: new Set() };
+      const region = item.un_region;
+      const laborForce = Number(item.predicted_labour_force);
+      
+      if (!region || isNaN(laborForce)) {
+        return acc;
       }
-      acc[item.un_region].total += item.predicted_labour_force;
-      acc[item.un_region].count += 1;
-      acc[item.un_region].countries.add(item.geo);
+      
+      if (!acc[region]) {
+        acc[region] = { region, total: 0, count: 0, countries: new Set() };
+      }
+      acc[region].total += laborForce;
+      acc[region].count += 1;
+      acc[region].countries.add(item.geo);
       return acc;
     }, {});
 
@@ -70,34 +105,54 @@ export const AnalyticsDashboard = () => {
     }));
   };
 
+  // FIXED: Process country trends with validation
   const processCountryTrends = () => {
-    const countries = [...new Set(predictionsData.map((item: any) => item.geo))];
-    console.log('Total unique countries found:', countries.length);
-    console.log('Countries list:', countries);
+    if (!predictionsData || predictionsData.length === 0) {
+      console.log('No predictions data for country trends');
+      return [];
+    }
+
+    const countries = [...new Set(predictionsData.map((item: any) => item.geo))].filter(Boolean);
+    console.log('Countries with prediction data:', countries.length, countries);
     
     return countries.map(country => {
       const countryData = predictionsData
         .filter((item: any) => item.geo === country)
+        .map((item: any) => ({
+          ...item,
+          predicted_labour_force: Number(item.predicted_labour_force)
+        }))
+        .filter((item: any) => !isNaN(item.predicted_labour_force))
         .sort((a: any, b: any) => a.time_period - b.time_period);
+      
+      if (countryData.length === 0) {
+        return null;
+      }
       
       const trend = countryData.length > 1 
         ? countryData[countryData.length - 1].predicted_labour_force - countryData[0].predicted_labour_force
         : 0;
 
+      const latest = countryData[countryData.length - 1]?.predicted_labour_force || 0;
+
       return {
         country,
         trend: trend.toFixed(2),
-        latest: countryData[countryData.length - 1]?.predicted_labour_force.toFixed(2) || 0,
+        latest: latest.toFixed(2),
         dataPoints: countryData.length,
         trendColor: trend > 0 ? "#10B981" : "#EF4444"
       };
-    }).sort((a: any, b: any) => b.latest - a.latest);
+    })
+    .filter(Boolean) // Remove null entries
+    .sort((a: any, b: any) => Number(b.latest) - Number(a.latest));
   };
 
   const timeSeriesData = processTimeSeriesData();
+  const regionalData = processRegionalData();
   const countryTrends = processCountryTrends();
 
-  console.log('Processed country trends:', countryTrends.length);
+  console.log('Time series processed:', timeSeriesData.length, 'data points');
+  console.log('Country trends processed:', countryTrends.length, 'countries');
 
   const handleExportTimeSeriesData = () => {
     exportToCSV(timeSeriesData, 'time_series_analysis');
@@ -109,9 +164,11 @@ export const AnalyticsDashboard = () => {
 
   const totalCountries = new Set(predictionsData.map((item: any) => item.geo)).size;
   const totalDataPoints = predictionsData.length;
-  const yearRange = Math.max(...predictionsData.map((item: any) => item.time_period)) - 
-                   Math.min(...predictionsData.map((item: any) => item.time_period)) + 1;
-  const avgPrediction = (predictionsData.reduce((sum: number, item: any) => sum + item.predicted_labour_force, 0) / totalDataPoints).toFixed(2);
+  const yearRange = predictionsData.length > 0 ? 
+    Math.max(...predictionsData.map((item: any) => item.time_period)) - 
+    Math.min(...predictionsData.map((item: any) => item.time_period)) + 1 : 0;
+  const avgPrediction = predictionsData.length > 0 ? 
+    (predictionsData.reduce((sum: number, item: any) => sum + (Number(item.predicted_labour_force) || 0), 0) / totalDataPoints).toFixed(2) : '0';
 
   return (
     <div className="space-y-6">
@@ -192,24 +249,30 @@ export const AnalyticsDashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <AreaChart data={timeSeriesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="year" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Area 
-                    type="monotone" 
-                    dataKey="average" 
-                    stackId="1" 
-                    stroke="#3B82F6" 
-                    fill="#3B82F6" 
-                    fillOpacity={0.6}
-                    name="Average per Country"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {timeSeriesData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  <AreaChart data={timeSeriesData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="year" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Area 
+                      type="monotone" 
+                      dataKey="average" 
+                      stackId="1" 
+                      stroke="#3B82F6" 
+                      fill="#3B82F6" 
+                      fillOpacity={0.6}
+                      name="Average per Country"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-40">
+                  <p className="text-gray-500">No hay datos de predicciones disponibles</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -233,48 +296,54 @@ export const AnalyticsDashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-semibold mb-3">Trend Direction (Top 20)</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={countryTrends.slice(0, 20)}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="country" angle={-45} textAnchor="end" height={100} />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar 
-                        dataKey="trend" 
-                        fill="#3B82F6"
-                        name="Trend"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+              {countryTrends.length > 0 ? (
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="font-semibold mb-3">Trend Direction (Top 20)</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={countryTrends.slice(0, 20)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="country" angle={-45} textAnchor="end" height={100} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar 
+                          dataKey="trend" 
+                          fill="#3B82F6"
+                          name="Trend"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
 
-                <div>
-                  <h3 className="font-semibold mb-3">Todas las predicciones por país ({countryTrends.length} países)</h3>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {countryTrends.map((country: any, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <div>
-                          <div className="font-medium">{country.country}</div>
-                          <div className="text-sm text-gray-600">
-                            {country.dataPoints} data points
+                  <div>
+                    <h3 className="font-semibold mb-3">Todas las predicciones por país ({countryTrends.length} países)</h3>
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {countryTrends.map((country: any, index) => (
+                        <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                          <div>
+                            <div className="font-medium">{country.country}</div>
+                            <div className="text-sm text-gray-600">
+                              {country.dataPoints} data points
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold">{country.latest}M</div>
+                            <div className={`text-sm ${
+                              Number(country.trend) > 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {Number(country.trend) > 0 ? '+' : ''}{country.trend}
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-bold">{country.latest}M</div>
-                          <div className={`text-sm ${
-                            Number(country.trend) > 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {Number(country.trend) > 0 ? '+' : ''}{country.trend}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center justify-center h-40">
+                  <p className="text-gray-500">No hay datos de tendencias de países disponibles</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
