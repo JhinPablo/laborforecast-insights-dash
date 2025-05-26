@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -73,6 +72,9 @@ export const AnalyticsDashboard = () => {
 
   const processCountryTrends = () => {
     const countries = [...new Set(predictionsData.map((item: any) => item.geo))];
+    console.log('Total unique countries found:', countries.length);
+    console.log('Countries list:', countries);
+    
     return countries.map(country => {
       const countryData = predictionsData
         .filter((item: any) => item.geo === country)
@@ -94,6 +96,8 @@ export const AnalyticsDashboard = () => {
 
   const timeSeriesData = processTimeSeriesData();
   const countryTrends = processCountryTrends();
+
+  console.log('Processed country trends:', countryTrends.length);
 
   const handleExportTimeSeriesData = () => {
     exportToCSV(timeSeriesData, 'time_series_analysis');
@@ -248,7 +252,7 @@ export const AnalyticsDashboard = () => {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-3">Latest Predictions (Todos los países)</h3>
+                  <h3 className="font-semibold mb-3">Todas las predicciones por país ({countryTrends.length} países)</h3>
                   <div className="space-y-2 max-h-80 overflow-y-auto">
                     {countryTrends.map((country: any, index) => (
                       <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
