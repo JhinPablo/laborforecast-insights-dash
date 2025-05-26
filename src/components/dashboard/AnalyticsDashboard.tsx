@@ -1,15 +1,18 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { useCSVData } from '@/hooks/useCSVData';
+import { useCSVExport } from '@/hooks/useCSVExport';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area, ScatterPlot, Scatter } from 'recharts';
-import { TrendingUp, Users, Globe, BarChart3, Activity, MapPin } from 'lucide-react';
+import { TrendingUp, Users, Globe, BarChart3, Activity, Download, MapPin } from 'lucide-react';
 import { InteractiveMap } from './InteractiveMap';
+import { BasicReport } from './BasicReport';
 
 export const AnalyticsDashboard = () => {
   const { data: predictionsData, loading: predictionsLoading } = useCSVData('predictions.csv');
   const { data: geoData, loading: geoLoading } = useCSVData('geo_data.csv');
+  const { exportToCSV } = useCSVExport();
   
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
 
@@ -23,7 +26,6 @@ export const AnalyticsDashboard = () => {
     );
   }
 
-  // Process data for different visualizations
   const processTimeSeriesData = () => {
     const groupedByYear = predictionsData.reduce((acc: any, item: any) => {
       if (!acc[item.time_period]) {
@@ -83,14 +85,22 @@ export const AnalyticsDashboard = () => {
         country,
         trend: trend.toFixed(2),
         latest: countryData[countryData.length - 1]?.predicted_labour_force.toFixed(2) || 0,
-        dataPoints: countryData.length
+        dataPoints: countryData.length,
+        trendColor: trend > 0 ? "#10B981" : "#EF4444"
       };
     });
   };
 
   const timeSeriesData = processTimeSeriesData();
-  const regionalData = processRegionalData();
   const countryTrends = processCountryTrends();
+
+  const handleExportTimeSeriesData = () => {
+    exportToCSV(timeSeriesData, 'time_series_analysis');
+  };
+
+  const handleExportCountryTrends = () => {
+    exportToCSV(countryTrends, 'country_trends_analysis');
+  };
 
   const totalCountries = new Set(predictionsData.map((item: any) => item.geo)).size;
   const totalDataPoints = predictionsData.length;
@@ -157,7 +167,7 @@ export const AnalyticsDashboard = () => {
       <Tabs defaultValue="trends" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="trends">Time Trends</TabsTrigger>
-          <TabsTrigger value="regions">Regional Analysis</TabsTrigger>
+          <TabsTrigger value="reports">Reportes</TabsTrigger>
           <TabsTrigger value="countries">Country Comparison</TabsTrigger>
           <TabsTrigger value="map">Interactive Map</TabsTrigger>
         </TabsList>
@@ -165,8 +175,16 @@ export const AnalyticsDashboard = () => {
         <TabsContent value="trends" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Labor Force Predictions Over Time</CardTitle>
-              <CardDescription>Average and total predicted labor force across all countries</CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Labor Force Predictions Over Time</CardTitle>
+                  <CardDescription>Average and total predicted labor force across all countries</CardDescription>
+                </div>
+                <Button onClick={handleExportTimeSeriesData} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
@@ -191,82 +209,23 @@ export const AnalyticsDashboard = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="regions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Regional Distribution</CardTitle>
-              <CardDescription>Labor force predictions by UN regions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={regionalData} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="region" type="category" width={120} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="average" fill="#10B981" name="Average Labor Force" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Regional Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {regionalData.map((region: any, index) => (
-                    <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                      <div>
-                        <div className="font-medium">{region.region}</div>
-                        <div className="text-sm text-gray-600">{region.countries} countries</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold">{region.average}M</div>
-                        <div className="text-sm text-gray-600">avg/country</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Data Coverage</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-sm">Total Regions</span>
-                    <span className="font-medium">{regionalData.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm">Most Represented</span>
-                    <span className="font-medium">
-                      {regionalData.sort((a: any, b: any) => b.countries - a.countries)[0]?.region}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm">Highest Average</span>
-                    <span className="font-medium">
-                      {regionalData.sort((a: any, b: any) => b.average - a.average)[0]?.region}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <TabsContent value="reports">
+          <BasicReport predictionsData={predictionsData} geoData={geoData} />
         </TabsContent>
 
         <TabsContent value="countries" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Country Trends Analysis</CardTitle>
-              <CardDescription>Labor force trend comparison across top countries</CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Country Trends Analysis</CardTitle>
+                  <CardDescription>Labor force trend comparison across top countries</CardDescription>
+                </div>
+                <Button onClick={handleExportCountryTrends} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-6">
