@@ -2,43 +2,23 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { useCSVData } from '@/hooks/useCSVData';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from 'recharts';
-import { TrendingUp, Users, Globe, Download, FileText, BarChart3 } from 'lucide-react';
+import { TrendingUp, Users, Globe, Download, FileText, BarChart3, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { PredictionMap } from './PredictionMap';
 
 export const GoldPlan = () => {
-  const [laborData, setLaborData] = useState([]);
-  const [populationData, setPopulationData] = useState([]);
-  const [fertilityData, setFertilityData] = useState([]);
-  const [predictionsData, setPredictionsData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: laborData, loading: laborLoading } = useCSVData('labor.csv');
+  const { data: populationData, loading: populationLoading } = useCSVData('population.csv');
+  const { data: fertilityData, loading: fertilityLoading } = useCSVData('fertility.csv');
+  const { data: predictionsData, loading: predictionsLoading } = useCSVData('predictions.csv');
+  const { data: geoData, loading: geoLoading } = useCSVData('geo_data.csv');
+  
   const [activeTab, setActiveTab] = useState('dashboard');
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
-
-  const fetchAllData = async () => {
-    try {
-      const [laborRes, populationRes, fertilityRes, predictionsRes] = await Promise.all([
-        supabase.from('labor').select('*').order('year'),
-        supabase.from('population').select('*').order('year'),
-        supabase.from('fertility').select('*').order('year'),
-        supabase.from('predictions').select('*').order('time_period')
-      ]);
-
-      setLaborData(laborRes.data || []);
-      setPopulationData(populationRes.data || []);
-      setFertilityData(fertilityRes.data || []);
-      setPredictionsData(predictionsRes.data || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = laborLoading || populationLoading || fertilityLoading || predictionsLoading || geoLoading;
 
   const exportToCSV = (data: any[], filename: string) => {
     if (!data.length) return;
@@ -82,12 +62,6 @@ export const GoldPlan = () => {
   }, {});
 
   const laborChartData = Object.values(laborByYear);
-
-  const predictionsChartData = predictionsData.map((item: any) => ({
-    year: item.time_period,
-    predicted: item.predicted_labour_force,
-    geo: item.geo
-  }));
 
   const renderDashboard = () => (
     <div className="space-y-6">
@@ -133,7 +107,7 @@ export const GoldPlan = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Math.max(...laborData.map((item: any) => item.year)) - Math.min(...laborData.map((item: any) => item.year)) + 1}
+              {laborData.length > 0 ? Math.max(...laborData.map((item: any) => item.year)) - Math.min(...laborData.map((item: any) => item.year)) + 1 : 0}
             </div>
             <p className="text-xs text-muted-foreground">Years covered</p>
           </CardContent>
@@ -173,75 +147,7 @@ export const GoldPlan = () => {
     </div>
   );
 
-  const renderPredictions = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Labor Force Predictions</CardTitle>
-          <CardDescription>Future workforce projections by region</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={predictionsChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="predicted" stroke="#10B981" strokeWidth={3} name="Predicted Labor Force" />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Prediction Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600">Total Predictions</p>
-                <p className="text-2xl font-bold">{predictionsData.length}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Countries Covered</p>
-                <p className="text-2xl font-bold">{new Set(predictionsData.map((item: any) => item.geo)).size}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Projection Years</p>
-                <p className="text-2xl font-bold">
-                  {predictionsData.length ? 
-                    `${Math.min(...predictionsData.map((item: any) => item.time_period))} - ${Math.max(...predictionsData.map((item: any) => item.time_period))}` 
-                    : 'N/A'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Predicted Growth</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {predictionsData
-                .sort((a: any, b: any) => (b.predicted_labour_force || 0) - (a.predicted_labour_force || 0))
-                .slice(0, 5)
-                .map((item: any, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm font-medium">{item.geo}</span>
-                    <span className="text-sm text-gray-600">{(item.predicted_labour_force / 1000000).toFixed(1)}M</span>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+  const renderPredictions = () => <PredictionMap />;
 
   const renderReports = () => (
     <div className="space-y-6">
@@ -335,8 +241,8 @@ export const GoldPlan = () => {
           onClick={() => setActiveTab('predictions')}
           className="flex-1"
         >
-          <TrendingUp className="h-4 w-4 mr-2" />
-          Predictions
+          <MapPin className="h-4 w-4 mr-2" />
+          Prediction Map
         </Button>
         <Button
           variant={activeTab === 'reports' ? 'default' : 'ghost'}
