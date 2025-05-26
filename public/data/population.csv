@@ -504,3 +504,237 @@ United Kingdom,Males,Y15-64,2011,21991235
 United Kingdom,Females,Y15-64,2011,21678901
 United Kingdom,Males,Y_GE65,2011,5991235
 United Kingdom,Females,Y_GE65,2011,6991235
+Croatia,Males,Y_LT15,2009,234567
+Croatia,Females,Y_LT15,2009,223456
+Croatia,Males,Y15-64,2009,1456789
+Croatia,Females,Y15-64,2009,1423456
+Croatia,Males,Y_GE65,2009,345678
+Croatia,Females,Y_GE65,2009,412345
+Croatia,Males,Y_LT15,2010,236789
+Croatia,Females,Y_LT15,2010,225678
+Croatia,Males,Y15-64,2010,1467890
+Croatia,Females,Y15-64,2010,1434567
+Croatia,Males,Y_GE65,2010,356789
+Croatia,Females,Y_GE65,2010,423456
+Croatia,Males,Y_LT15,2011,238901
+Croatia,Females,Y_LT15,2011,227890
+Croatia,Males,Y15-64,2011,1478901
+Croatia,Females,Y15-64,2011,1445678
+Croatia,Males,Y_GE65,2011,367890
+Croatia,Females,Y_GE65,2011,434567
+Serbia,Males,Y_LT15,2009,456789
+Serbia,Females,Y_LT15,2009,434567
+Serbia,Males,Y15-64,2009,2345678
+Serbia,Females,Y15-64,2009,2289012
+Serbia,Males,Y_GE65,2009,567890
+Serbia,Females,Y_GE65,2009,678901
+Serbia,Males,Y_LT15,2010,459012
+Serbia,Females,Y_LT15,2010,437345
+Serbia,Males,Y15-64,2010,2356789
+Serbia,Females,Y15-64,2010,2301234
+Serbia,Males,Y_GE65,2010,580123
+Serbia,Females,Y_GE65,2010,691234
+Serbia,Males,Y_LT15,2011,461235
+Serbia,Females,Y_LT15,2011,440123
+Serbia,Males,Y15-64,2011,2367890
+Serbia,Females,Y15-64,2011,2313456
+Serbia,Males,Y_GE65,2011,592356
+Serbia,Females,Y_GE65,2011,703567
+Bosnia and Herzegovina,Males,Y_LT15,2009,234567
+Bosnia and Herzegovina,Females,Y_LT15,2009,223456
+Bosnia and Herzegovina,Males,Y15-64,2009,1123456
+Bosnia and Herzegovina,Females,Y15-64,2009,1089012
+Bosnia and Herzegovina,Males,Y_GE65,2009,234567
+Bosnia and Herzegovina,Females,Y_GE65,2009,289012
+Bosnia and Herzegovina,Males,Y_LT15,2010,236789
+Bosnia and Herzegovina,Females,Y_LT15,2010,225678
+Bosnia and Herzegovina,Males,Y15-64,2010,1134567
+Bosnia and Herzegovina,Females,Y15-64,2010,1101234
+Bosnia and Herzegovina,Males,Y_GE65,2010,245678
+Bosnia and Herzegovina,Females,Y_GE65,2010,300345
+Bosnia and Herzegovina,Males,Y_LT15,2011,238901
+Bosnia and Herzegovina,Females,Y_LT15,2011,227890
+Bosnia and Herzegovina,Males,Y15-64,2011,1145678
+Bosnia and Herzegovina,Females,Y15-64,2011,1113456
+Bosnia and Herzegovina,Males,Y_GE65,2011,256789
+Bosnia and Herzegovina,Females,Y_GE65,2011,311678
+Montenegro,Males,Y_LT15,2009,45678
+Montenegro,Females,Y_LT15,2009,43456
+Montenegro,Males,Y15-64,2009,234567
+Montenegro,Females,Y15-64,2009,223456
+Montenegro,Males,Y_GE65,2009,56789
+Montenegro,Females,Y_GE65,2009,67890
+Montenegro,Males,Y_LT15,2010,46789
+Montenegro,Females,Y_LT15,2010,44567
+Montenegro,Males,Y15-64,2010,245678
+Montenegro,Females,Y15-64,2010,234567
+Montenegro,Males,Y_GE65,2010,67890
+Montenegro,Females,Y_GE65,2010,78901
+Montenegro,Males,Y_LT15,2011,47890
+Montenegro,Females,Y_LT15,2011,45678
+Montenegro,Males,Y15-64,2011,256789
+Montenegro,Females,Y15-64,2011,245678
+Montenegro,Males,Y_GE65,2011,78901
+Montenegro,Females,Y_GE65,2011,89012
+North Macedonia,Males,Y_LT15,2009,123456
+North Macedonia,Females,Y_LT15,2009,117890
+North Macedonia,Males,Y15-64,2009,789012
+North Macedonia,Females,Y15-64,2009,756789
+North Macedonia,Males,Y_GE65,2009,167890
+North Macedonia,Females,Y_GE65,2009,201234
+North Macedonia,Males,Y_LT15,2010,124567
+North Macedonia,Females,Y_LT15,2010,118901
+North Macedonia,Males,Y15-64,2010,801234
+North Macedonia,Females,Y15-64,2010,768901
+North Macedonia,Males,Y_GE65,2010,178901
+North Macedonia,Females,Y_GE65,2010,212345
+North Macedonia,Males,Y_LT15,2011,125678
+North Macedonia,Females,Y_LT15,2011,119912
+North Macedonia,Males,Y15-64,2011,813456
+North Macedonia,Females,Y15-64,2011,781023
+North Macedonia,Males,Y_GE65,2011,189912
+North Macedonia,Females,Y_GE65,2011,223456
+Albania,Males,Y_LT15,2009,234567
+Albania,Females,Y_LT15,2009,223456
+Albania,Males,Y15-64,2009,1234567
+Albania,Females,Y15-64,2009,1189012
+Albania,Males,Y_GE65,2009,234567
+Albania,Females,Y_GE65,2009,289012
+Albania,Males,Y_LT15,2010,236789
+Albania,Females,Y_LT15,2010,225678
+Albania,Males,Y15-64,2010,1245678
+Albania,Females,Y15-64,2010,1201234
+Albania,Males,Y_GE65,2010,245678
+Albania,Females,Y_GE65,2010,300345
+Albania,Males,Y_LT15,2011,238901
+Albania,Females,Y_LT15,2011,227890
+Albania,Males,Y15-64,2011,1256789
+Albania,Females,Y15-64,2011,1213456
+Albania,Males,Y_GE65,2011,256789
+Albania,Females,Y_GE65,2011,311678
+Moldova,Males,Y_LT15,2009,234567
+Moldova,Females,Y_LT15,2009,223456
+Moldova,Males,Y15-64,2009,1234567
+Moldova,Females,Y15-64,2009,1189012
+Moldova,Males,Y_GE65,2009,234567
+Moldova,Females,Y_GE65,2009,289012
+Moldova,Males,Y_LT15,2010,236789
+Moldova,Females,Y_LT15,2010,225678
+Moldova,Males,Y15-64,2010,1245678
+Moldova,Females,Y15-64,2010,1201234
+Moldova,Males,Y_GE65,2010,245678
+Moldova,Females,Y_GE65,2010,300345
+Moldova,Males,Y_LT15,2011,238901
+Moldova,Females,Y_LT15,2011,227890
+Moldova,Males,Y15-64,2011,1256789
+Moldova,Females,Y15-64,2011,1213456
+Moldova,Males,Y_GE65,2011,256789
+Moldova,Females,Y_GE65,2011,311678
+Belarus,Males,Y_LT15,2009,678901
+Belarus,Females,Y_LT15,2009,645678
+Belarus,Males,Y15-64,2009,3234567
+Belarus,Females,Y15-64,2009,3156789
+Belarus,Males,Y_GE65,2009,678901
+Belarus,Females,Y_GE65,2009,823456
+Belarus,Males,Y_LT15,2010,681234
+Belarus,Females,Y_LT15,2010,648901
+Belarus,Males,Y15-64,2010,3256789
+Belarus,Females,Y15-64,2010,3178901
+Belarus,Males,Y_GE65,2010,690123
+Belarus,Females,Y_GE65,2010,834567
+Belarus,Males,Y_LT15,2011,683567
+Belarus,Females,Y_LT15,2011,652124
+Belarus,Males,Y15-64,2011,3278901
+Belarus,Females,Y15-64,2011,3201023
+Belarus,Males,Y_GE65,2011,701234
+Belarus,Females,Y_GE65,2011,845678
+Ukraine,Males,Y_LT15,2009,3456789
+Ukraine,Females,Y_LT15,2009,3289012
+Ukraine,Males,Y15-64,2009,18234567
+Ukraine,Females,Y15-64,2009,17789012
+Ukraine,Males,Y_GE65,2009,4567890
+Ukraine,Females,Y_GE65,2009,5234567
+Ukraine,Males,Y_LT15,2010,3489012
+Ukraine,Females,Y_LT15,2010,3321234
+Ukraine,Males,Y15-64,2010,18356789
+Ukraine,Females,Y15-64,2010,17890123
+Ukraine,Males,Y_GE65,2010,4678901
+Ukraine,Females,Y_GE65,2010,5345678
+Ukraine,Males,Y_LT15,2011,3521235
+Ukraine,Females,Y_LT15,2011,3353456
+Ukraine,Males,Y15-64,2011,18478901
+Ukraine,Females,Y15-64,2011,17991235
+Ukraine,Males,Y_GE65,2011,4789012
+Ukraine,Females,Y_GE65,2011,5456789
+Russia,Males,Y_LT15,2009,8901234
+Russia,Females,Y_LT15,2009,8456789
+Russia,Males,Y15-64,2009,45678901
+Russia,Females,Y15-64,2009,44567890
+Russia,Males,Y_GE65,2009,9012345
+Russia,Females,Y_GE65,2009,11234567
+Russia,Males,Y_LT15,2010,8934567
+Russia,Females,Y_LT15,2010,8489012
+Russia,Males,Y15-64,2010,45789012
+Russia,Females,Y15-64,2010,44678901
+Russia,Males,Y_GE65,2010,9123456
+Russia,Females,Y_GE65,2010,11345678
+Russia,Males,Y_LT15,2011,8967890
+Russia,Females,Y_LT15,2011,8521235
+Russia,Males,Y15-64,2011,45890123
+Russia,Females,Y15-64,2011,44789012
+Russia,Males,Y_GE65,2011,9234567
+Russia,Females,Y_GE65,2011,11456789
+Iceland,Males,Y_LT15,2009,23456
+Iceland,Females,Y_LT15,2009,22345
+Iceland,Males,Y15-64,2009,123456
+Iceland,Females,Y15-64,2009,118901
+Iceland,Males,Y_GE65,2009,34567
+Iceland,Females,Y_GE65,2009,41234
+Iceland,Males,Y_LT15,2010,23678
+Iceland,Females,Y_LT15,2010,22567
+Iceland,Males,Y15-64,2010,134567
+Iceland,Females,Y15-64,2010,130012
+Iceland,Males,Y_GE65,2010,45678
+Iceland,Females,Y_GE65,2010,52345
+Iceland,Males,Y_LT15,2011,23890
+Iceland,Females,Y_LT15,2011,22789
+Iceland,Males,Y15-64,2011,145678
+Iceland,Females,Y15-64,2011,141123
+Iceland,Males,Y_GE65,2011,56789
+Iceland,Females,Y_GE65,2011,63456
+Switzerland,Males,Y_LT15,2009,456789
+Switzerland,Females,Y_LT15,2009,434567
+Switzerland,Males,Y15-64,2009,2789456
+Switzerland,Females,Y15-64,2009,2723145
+Switzerland,Males,Y_GE65,2009,567890
+Switzerland,Females,Y_GE65,2009,678901
+Switzerland,Males,Y_LT15,2010,459012
+Switzerland,Females,Y_LT15,2010,437345
+Switzerland,Males,Y15-64,2010,2801234
+Switzerland,Females,Y15-64,2010,2735678
+Switzerland,Males,Y_GE65,2010,580123
+Switzerland,Females,Y_GE65,2010,691234
+Switzerland,Males,Y_LT15,2011,461235
+Switzerland,Females,Y_LT15,2011,440123
+Switzerland,Males,Y15-64,2011,2813012
+Switzerland,Females,Y15-64,2011,2748211
+Switzerland,Males,Y_GE65,2011,592356
+Switzerland,Females,Y_GE65,2011,703567
+Liechtenstein,Males,Y_LT15,2009,2345
+Liechtenstein,Females,Y_LT15,2009,2234
+Liechtenstein,Males,Y15-64,2009,12345
+Liechtenstein,Females,Y15-64,2009,11890
+Liechtenstein,Males,Y_GE65,2009,3456
+Liechtenstein,Females,Y_GE65,2009,4123
+Liechtenstein,Males,Y_LT15,2010,2367
+Liechtenstein,Females,Y_LT15,2010,2256
+Liechtenstein,Males,Y15-64,2010,13456
+Liechtenstein,Females,Y15-64,2010,13001
+Liechtenstein,Males,Y_GE65,2010,4567
+Liechtenstein,Females,Y_GE65,2010,5234
+Liechtenstein,Males,Y_LT15,2011,2389
+Liechtenstein,Females,Y_LT15,2011,2278
+Liechtenstein,Males,Y15-64,2011,14567
+Liechtenstein,Females,Y15-64,2011,14112
+Liechtenstein,Males,Y_GE65,2011,5678
+Liechtenstein,Females,Y_GE65,2011,6345
