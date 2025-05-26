@@ -14,9 +14,38 @@ export const PredictionMap = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
+  // Move all hooks to the top before any early returns
+  const years = predictionsData?.length ? [...new Set(predictionsData
+    .map(item => item.time_period)
+    .filter(year => year && !isNaN(Number(year)))
+  )].sort((a, b) => Number(a) - Number(b)) : [];
+
+  const countries = predictionsData?.length ? [...new Set(predictionsData
+    .map(item => item.geo)
+    .filter(geo => geo)
+  )].sort() : [];
+
+  // Auto-play functionality
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPlaying && years.length > 0) {
+      interval = setInterval(() => {
+        setSelectedYear(prev => {
+          const currentIndex = years.indexOf(prev);
+          const nextIndex = (currentIndex + 1) % years.length;
+          return years[nextIndex];
+        });
+      }, 1500);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, years]);
+
   console.log('Predictions data:', predictionsData?.length || 0, 'records');
   console.log('Geo data:', geoData?.length || 0, 'records');
+  console.log('Available years:', years);
+  console.log('Available countries:', countries.length);
 
+  // Early returns after all hooks
   if (predictionsLoading || geoLoading) {
     return (
       <Card>
@@ -27,7 +56,6 @@ export const PredictionMap = () => {
     );
   }
 
-  // Ensure we have data before processing
   if (!predictionsData?.length || !geoData?.length) {
     return (
       <Card>
@@ -43,42 +71,14 @@ export const PredictionMap = () => {
     );
   }
 
-  // Get unique years and countries from predictions data
-  const years = [...new Set(predictionsData
-    .map(item => item.time_period)
-    .filter(year => year && !isNaN(Number(year)))
-  )].sort((a, b) => Number(a) - Number(b));
-
-  const countries = [...new Set(predictionsData
-    .map(item => item.geo)
-    .filter(geo => geo)
-  )].sort();
-
-  console.log('Available years:', years);
-  console.log('Available countries:', countries.length);
-
-  // Auto-play functionality
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isPlaying && years.length > 0) {
-      interval = setInterval(() => {
-        setSelectedYear(prev => {
-          const currentIndex = years.indexOf(prev);
-          const nextIndex = (currentIndex + 1) % years.length;
-          return years[nextIndex];
-        });
-      }, 1500); // Slower animation for better visibility
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, years]);
-
-  // Get data for specific year
+  // Get data for specific year - fix TypeScript errors by ensuring geo property exists
   const getDataForYear = (year: number) => {
     return predictionsData
-      .filter(item => item.time_period === year && item.predicted_labour_force)
+      .filter(item => item.time_period === year && item.predicted_labour_force && item.geo)
       .map(item => ({
-        ...item,
-        predicted_labour_force: Number(item.predicted_labour_force)
+        geo: item.geo,
+        predicted_labour_force: Number(item.predicted_labour_force),
+        time_period: item.time_period
       }))
       .filter(item => !isNaN(item.predicted_labour_force))
       .sort((a, b) => b.predicted_labour_force - a.predicted_labour_force);
@@ -89,7 +89,7 @@ export const PredictionMap = () => {
     return predictionsData
       .filter(item => item.geo === country && item.predicted_labour_force)
       .map(item => ({
-        ...item,
+        geo: item.geo,
         time_period: Number(item.time_period),
         predicted_labour_force: Number(item.predicted_labour_force)
       }))
@@ -104,7 +104,7 @@ export const PredictionMap = () => {
       .map(pred => {
         const geo = geoData.find(g => g.geo === pred.geo);
         return {
-          ...pred,
+          geo: pred.geo,
           predicted_labour_force: Number(pred.predicted_labour_force),
           un_region: geo?.un_region || 'Unknown'
         };
@@ -139,8 +139,8 @@ export const PredictionMap = () => {
       
       return {
         year,
-        total: (total / 1000000).toFixed(1), // in millions
-        average: (average / 1000000).toFixed(1), // in millions
+        total: (total / 1000000).toFixed(1),
+        average: (average / 1000000).toFixed(1),
         countries: yearData.length
       };
     });
