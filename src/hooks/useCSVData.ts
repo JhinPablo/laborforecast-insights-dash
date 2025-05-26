@@ -13,18 +13,11 @@ export const useCSVData = (filename: string) => {
     const loadCSV = async () => {
       try {
         setLoading(true);
-        // Try both src/data and public/data paths
-        let response;
-        try {
-          response = await fetch(`/src/data/${filename}`);
-          if (!response.ok) {
-            throw new Error('Not found in src/data');
-          }
-        } catch {
-          response = await fetch(`/data/${filename}`);
-          if (!response.ok) {
-            throw new Error(`Failed to load ${filename} from both locations`);
-          }
+        // Use the public/data path for production
+        const response = await fetch(`/data/${filename}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load ${filename} - Status: ${response.status}`);
         }
         
         const text = await response.text();
