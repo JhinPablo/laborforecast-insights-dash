@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -8,8 +7,8 @@ import { FreePlan } from '@/components/dashboard/FreePlan';
 import { SilverPlan } from '@/components/dashboard/SilverPlan';
 import { GoldPlan } from '@/components/dashboard/GoldPlan';
 import { HistoricalDashboard } from '@/components/dashboard/HistoricalDashboard';
-import { AnalyticsDashboard } from '@/components/dashboard/AnalyticsDashboard';
-import { EuropeMap } from '@/components/dashboard/EuropeMap';
+import { SimpleReports } from '@/components/dashboard/SimpleReports';
+import { PredictionsReports } from '@/components/dashboard/PredictionsReports';
 
 export const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -37,11 +36,11 @@ export const Dashboard = () => {
         // Dashboard histórico con datos reales de labor, población, fertilidad
         return <HistoricalDashboard />;
       case 'reports':
-        // Reportes y análisis avanzados
-        return <AnalyticsDashboard />;
+        // Reportes sencillos con datos históricos solamente
+        return <SimpleReports />;
       case 'predictions':
-        // Predicciones y mapa interactivo
-        return <EuropeMap />;
+        // Predicciones y mapa interactivo mejorado
+        return <PredictionsReports />;
       default:
         return <HistoricalDashboard />;
     }
