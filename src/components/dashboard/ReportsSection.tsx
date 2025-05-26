@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCSVData } from '@/hooks/useCSVData';
 import { useCSVExport } from '@/hooks/useCSVExport';
+import { usePDFGeneration } from '@/hooks/usePDFGeneration';
 import { Download, FileText, BarChart3, Users, TrendingUp, Calendar } from 'lucide-react';
 
 export const ReportsSection = () => {
@@ -12,6 +12,9 @@ export const ReportsSection = () => {
   const { data: predictionsData, loading: predictionsLoading } = useCSVData('predictions.csv');
   const { data: geoData, loading: geoLoading } = useCSVData('geo_data.csv');
   const { exportToCSV } = useCSVExport();
+  const { generateExecutiveReport, generateTrendsReport, generateRegionalReport } = usePDFGeneration();
+
+  const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
 
   const loading = laborLoading || populationLoading || predictionsLoading || geoLoading;
 
@@ -141,9 +144,26 @@ export const ReportsSection = () => {
     }
   };
 
-  const generatePDFReport = (type: string) => {
-    // Simular generación de PDF (aquí podrías integrar una librería como jsPDF)
-    alert(`Generando reporte PDF de ${type}... (Funcionalidad pendiente de implementar)`);
+  const handleGeneratePDF = async (type: string) => {
+    setGeneratingPDF(type);
+    try {
+      switch (type) {
+        case 'ejecutivo':
+          await generateExecutiveReport(laborData, populationData, predictionsData, geoData);
+          break;
+        case 'tendencias':
+          await generateTrendsReport(laborData, populationData);
+          break;
+        case 'regional':
+          await generateRegionalReport(predictionsData, geoData);
+          break;
+      }
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      alert('Error al generar el PDF. Por favor, inténtalo de nuevo.');
+    } finally {
+      setGeneratingPDF(null);
+    }
   };
 
   if (loading) {
@@ -276,22 +296,40 @@ export const ReportsSection = () => {
               <div className="flex justify-between items-center p-3 border rounded-lg">
                 <div>
                   <h3 className="font-medium">Reporte Ejecutivo</h3>
-                  <p className="text-sm text-gray-600">Resumen completo con gráficos</p>
+                  <p className="text-sm text-gray-600">Resumen completo con estadísticas clave</p>
                 </div>
-                <Button onClick={() => generatePDFReport('ejecutivo')} size="sm" variant="outline">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generar PDF
+                <Button 
+                  onClick={() => handleGeneratePDF('ejecutivo')} 
+                  size="sm" 
+                  variant="outline"
+                  disabled={generatingPDF === 'ejecutivo'}
+                >
+                  {generatingPDF === 'ejecutivo' ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
+                  {generatingPDF === 'ejecutivo' ? 'Generando...' : 'Generar PDF'}
                 </Button>
               </div>
 
               <div className="flex justify-between items-center p-3 border rounded-lg">
                 <div>
                   <h3 className="font-medium">Análisis de Tendencias</h3>
-                  <p className="text-sm text-gray-600">Evolución temporal y proyecciones</p>
+                  <p className="text-sm text-gray-600">Evolución temporal y análisis demográfico</p>
                 </div>
-                <Button onClick={() => generatePDFReport('tendencias')} size="sm" variant="outline">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generar PDF
+                <Button 
+                  onClick={() => handleGeneratePDF('tendencias')} 
+                  size="sm" 
+                  variant="outline"
+                  disabled={generatingPDF === 'tendencias'}
+                >
+                  {generatingPDF === 'tendencias' ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
+                  {generatingPDF === 'tendencias' ? 'Generando...' : 'Generar PDF'}
                 </Button>
               </div>
 
@@ -300,9 +338,18 @@ export const ReportsSection = () => {
                   <h3 className="font-medium">Comparativa Regional</h3>
                   <p className="text-sm text-gray-600">Análisis por regiones europeas</p>
                 </div>
-                <Button onClick={() => generatePDFReport('regional')} size="sm" variant="outline">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generar PDF
+                <Button 
+                  onClick={() => handleGeneratePDF('regional')} 
+                  size="sm" 
+                  variant="outline"
+                  disabled={generatingPDF === 'regional'}
+                >
+                  {generatingPDF === 'regional' ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
+                  {generatingPDF === 'regional' ? 'Generando...' : 'Generar PDF'}
                 </Button>
               </div>
             </div>
