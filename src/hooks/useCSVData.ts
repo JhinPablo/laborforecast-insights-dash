@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 
 interface CSVData {
@@ -13,7 +14,8 @@ export const useCSVData = (filename: string) => {
     const loadCSV = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/src/data/${filename}`);
+        // Updated path to look in public directory
+        const response = await fetch(`/data/${filename}`);
         if (!response.ok) {
           throw new Error(`Failed to load ${filename}`);
         }
