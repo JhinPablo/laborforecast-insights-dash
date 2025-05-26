@@ -15,8 +15,8 @@ import { scaleLinear } from 'd3-scale';
 import { Tooltip as ReactTooltip } from 'react-tooltip';
 import { MapPin, Play, Pause, ChevronLeft, ChevronRight, TrendingUp, History } from 'lucide-react';
 
-// Europe GeoJSON map data
-const geoUrl = "https://raw.githubusercontent.com/deldersveld/topojson/master/continents/europe.json";
+// High-quality Europe GeoJSON map data - more detailed and realistic
+const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
 
 interface CountryData {
   geo: string;
@@ -35,7 +35,7 @@ export const RealisticEuropeMap = () => {
   const { data: geoData, loading: geoLoading } = useCSVData('geo_data.csv');
   
   const [laborData, setLaborData] = useState([]);
-  const [selectedYear, setSelectedYear] = useState(2020);
+  const [selectedYear, setSelectedYear] = useState(2025);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [tooltipContent, setTooltipContent] = useState("");
@@ -58,14 +58,21 @@ export const RealisticEuropeMap = () => {
     }
   };
 
-  // Combine historical and prediction years
+  // Get historical years from labor data
   const historicalYears = [...new Set(laborData.map((item: any) => item.year))].sort();
-  const predictionYears = [...new Set(predictionsData.map(item => item.time_period))].sort();
-  const allYears = [...new Set([...historicalYears, ...predictionYears])].sort();
   
+  // Predictions are from 2025 to 2049
+  const predictionYears = Array.from({length: 25}, (_, i) => 2025 + i);
+  
+  // Filter prediction data to only include 2025-2049
+  const filteredPredictionsData = predictionsData.filter(item => 
+    item.time_period >= 2025 && item.time_period <= 2049
+  );
+  
+  const allYears = [...new Set([...historicalYears, ...predictionYears])].sort();
   const minYear = Math.min(...allYears);
   const maxYear = Math.max(...allYears);
-  const transitionYear = Math.max(...historicalYears) + 1;
+  const transitionYear = historicalYears.length > 0 ? Math.max(...historicalYears) + 1 : 2025;
 
   // Auto-play functionality
   useEffect(() => {
@@ -111,8 +118,8 @@ export const RealisticEuropeMap = () => {
         };
       }).filter(marker => marker.latitude !== 0 && marker.longitude !== 0);
     } else {
-      // Use prediction data
-      const yearData = predictionsData.filter(item => item.time_period === year);
+      // Use prediction data (2025-2049)
+      const yearData = filteredPredictionsData.filter(item => item.time_period === year);
       return yearData.map(prediction => {
         const geoInfo = geoData.find(geo => geo.geo === prediction.geo);
         return {
@@ -138,12 +145,12 @@ export const RealisticEuropeMap = () => {
   const minValue = Math.min(...values);
 
   // Scale for circle size based on labor force
-  const sizeScale = scaleLinear().domain([minValue, maxValue]).range([8, 25]);
+  const sizeScale = scaleLinear().domain([minValue, maxValue]).range([6, 20]);
   
-  // Scale for circle color
+  // Scale for circle color - more sophisticated Google Maps style
   const colorScale = scaleLinear<string>()
     .domain([minValue, maxValue])
-    .range(isHistoricalView ? ['#60A5FA', '#1E40AF'] : ['#34D399', '#059669']);
+    .range(isHistoricalView ? ['#4285F4', '#1557B0'] : ['#34A853', '#0D8043']);
 
   const handleYearChange = (direction: 'prev' | 'next') => {
     const currentIndex = allYears.indexOf(selectedYear);
@@ -164,6 +171,17 @@ export const RealisticEuropeMap = () => {
     );
   };
 
+  // European countries ISO codes for filtering
+  const europeanCountries = [
+    'Albania', 'Andorra', 'Austria', 'Belarus', 'Belgium', 'Bosnia and Herzegovina',
+    'Bulgaria', 'Croatia', 'Cyprus', 'Czechia', 'Denmark', 'Estonia', 'Finland',
+    'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy',
+    'Kosovo', 'Latvia', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Malta',
+    'Moldova', 'Monaco', 'Montenegro', 'Netherlands', 'North Macedonia', 'Norway',
+    'Poland', 'Portugal', 'Romania', 'San Marino', 'Serbia', 'Slovakia',
+    'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'Ukraine', 'United Kingdom'
+  ];
+
   if (predictionsLoading || geoLoading) {
     return (
       <Card>
@@ -179,10 +197,10 @@ export const RealisticEuropeMap = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5" />
-          Mapa Realista de Europa - Fuerza Laboral
+          Mapa de Europa - Fuerza Laboral
         </CardTitle>
         <CardDescription>
-          Visualización geográfica con datos históricos ({Math.min(...historicalYears)}-{Math.max(...historicalYears)}) y predicciones ({Math.min(...predictionYears)}-{Math.max(...predictionYears)})
+          Visualización geográfica con datos históricos ({historicalYears.length > 0 ? `${Math.min(...historicalYears)}-${Math.max(...historicalYears)}` : 'No disponibles'}) y predicciones (2025-2049)
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -198,7 +216,7 @@ export const RealisticEuropeMap = () => {
               ) : (
                 <>
                   <TrendingUp className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-600">Predicciones</span>
+                  <span className="text-sm font-medium text-green-600">Predicciones (2025-2049)</span>
                 </>
               )}
             </div>
@@ -251,7 +269,7 @@ export const RealisticEuropeMap = () => {
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-gray-600">
               <span>{minYear}</span>
-              <span className="text-xs text-gray-400">Transición: {transitionYear}</span>
+              <span className="text-xs text-gray-400">Predicciones: 2025-2049</span>
               <span>{maxYear}</span>
             </div>
             <Slider
@@ -265,40 +283,58 @@ export const RealisticEuropeMap = () => {
           </div>
         </div>
 
-        {/* Realistic Europe Map */}
-        <div className="relative bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg h-[600px] overflow-hidden border-2 border-blue-200">
+        {/* High-Quality Europe Map with Google Maps styling */}
+        <div className="relative bg-gradient-to-b from-slate-100 to-slate-200 rounded-lg h-[600px] overflow-hidden border shadow-lg">
           <ComposableMap
             projectionConfig={{ 
-              scale: 700,
-              center: [10, 55] // Center on Europe
+              scale: 800,
+              center: [10, 54] // Centered on Europe
             }}
             projection="geoMercator"
             width={800}
             height={600}
             data-tooltip-id="europe-map-tooltip"
             className="w-full h-full"
+            style={{
+              filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.12))'
+            }}
           >
-            {/* Europe countries */}
+            {/* Europe countries with Google Maps style */}
             <Geographies geography={geoUrl}>
               {({ geographies }) =>
-                geographies.map((geo) => (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    fill="#E5E7EB"
-                    stroke="#9CA3AF"
-                    strokeWidth={0.5}
-                    style={{
-                      default: { outline: "none" },
-                      hover: { fill: "#D1D5DB", outline: "none" },
-                      pressed: { outline: "none" },
-                    }}
-                  />
-                ))
+                geographies
+                  .filter(geo => {
+                    const countryName = geo.properties.NAME;
+                    return europeanCountries.some(country => 
+                      countryName.toLowerCase().includes(country.toLowerCase()) ||
+                      country.toLowerCase().includes(countryName.toLowerCase())
+                    );
+                  })
+                  .map((geo) => (
+                    <Geography
+                      key={geo.rsmKey}
+                      geography={geo}
+                      fill="#F8F9FA"
+                      stroke="#E8EAED"
+                      strokeWidth={0.8}
+                      style={{
+                        default: { 
+                          outline: "none",
+                          filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))'
+                        },
+                        hover: { 
+                          fill: "#F1F3F4", 
+                          outline: "none",
+                          filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15))'
+                        },
+                        pressed: { outline: "none" },
+                      }}
+                    />
+                  ))
               }
             </Geographies>
             
-            {/* Data markers */}
+            {/* Data markers with Google Maps style */}
             {currentMarkers.map((marker, i) => {
               const value = isHistoricalView ? marker.labour_force : (marker.predicted_labour_force || 0);
               return (
@@ -314,16 +350,22 @@ export const RealisticEuropeMap = () => {
                   <circle
                     r={sizeScale(value)}
                     fill={colorScale(value)}
-                    opacity={0.8}
+                    opacity={0.85}
                     stroke="#ffffff"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     className="cursor-pointer hover:opacity-100 transition-all hover:scale-110"
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))'
+                    }}
                   />
                   <text
                     textAnchor="middle"
-                    y={sizeScale(value) + 15}
-                    className="text-xs font-semibold fill-gray-800 pointer-events-none"
-                    style={{ fontSize: '10px' }}
+                    y={sizeScale(value) + 18}
+                    className="text-xs font-semibold fill-gray-700 pointer-events-none"
+                    style={{ 
+                      fontSize: '11px',
+                      textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8)'
+                    }}
                   >
                     {marker.geo}
                   </text>
@@ -335,11 +377,15 @@ export const RealisticEuropeMap = () => {
           <ReactTooltip 
             id="europe-map-tooltip" 
             html={tooltipContent}
-            className="bg-white shadow-lg border rounded-lg p-2 text-sm"
+            className="bg-white shadow-xl border rounded-lg p-3 text-sm"
+            style={{
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              borderColor: '#E8EAED'
+            }}
           />
 
-          {/* Map Legend */}
-          <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 border">
+          {/* Google Maps style legend */}
+          <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 border border-gray-200">
             <div className="text-sm font-semibold mb-3 text-gray-800">
               {isHistoricalView ? 'Fuerza Laboral Histórica' : 'Predicciones de Fuerza Laboral'}
             </div>
@@ -349,17 +395,17 @@ export const RealisticEuropeMap = () => {
                 <span>Menor valor</span>
               </div>
               <div className="flex items-center gap-2 text-xs">
-                <div className={`w-4 h-4 rounded-full ${isHistoricalView ? 'bg-blue-800' : 'bg-green-600'}`}></div>
+                <div className={`w-4 h-4 rounded-full ${isHistoricalView ? 'bg-blue-700' : 'bg-green-700'}`}></div>
                 <span>Mayor valor</span>
               </div>
               <div className="text-xs text-gray-500 mt-2">
-                Tamaño del círculo = Magnitud del valor
+                Tamaño = Magnitud del valor
               </div>
             </div>
           </div>
 
-          {/* Map Title */}
-          <div className="absolute top-4 left-4 bg-white/90 rounded-lg px-3 py-2 shadow-md">
+          {/* Google Maps style title */}
+          <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 shadow-md border border-gray-200">
             <div className="text-sm font-semibold text-gray-800">Europa - {selectedYear}</div>
             <div className="text-xs text-gray-600">
               {isHistoricalView ? 'Datos Reales' : 'Predicción'}
