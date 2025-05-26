@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCSVData } from '@/hooks/useCSVData';
@@ -162,7 +161,12 @@ export const SimpleReports = () => {
   const populationGenderDistribution = getPopulationGenderDistribution();
   const ageDistribution = getAgeDistribution();
 
-  const COLORS = ['#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6'];
+  // Fixed consistent gender colors: Blue for men, Pink for women
+  const getGenderColor = (sex: string) => {
+    if (sex === 'Hombres') return '#3B82F6'; // Blue for men
+    if (sex === 'Mujeres') return '#EC4899'; // Pink for women
+    return '#6B7280'; // Gray fallback
+  };
 
   // Calculate key statistics
   const totalCountries = new Set(laborData.map((item: any) => item.geo)).size;
@@ -266,7 +270,7 @@ export const SimpleReports = () => {
                   dataKey="value"
                 >
                   {populationGenderDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={getGenderColor(entry.sex)} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value) => [(Number(value) / 1000000).toFixed(1) + 'M', 'Población']} />
@@ -295,7 +299,7 @@ export const SimpleReports = () => {
                   dataKey="value"
                 >
                   {genderDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={getGenderColor(entry.sex)} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value) => [(Number(value) / 1000000).toFixed(1) + 'M', 'Fuerza Laboral']} />
