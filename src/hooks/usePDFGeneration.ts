@@ -120,9 +120,9 @@ export const usePDFGeneration = () => {
 
     pdf.setFontSize(10);
     Object.entries(genderLabor).forEach(([sex, total]: any, index) => {
-      const totalSum = Object.values(genderLabor).reduce((sum: number, val: number) => sum + val, 0);
-      const percentage = ((total / totalSum) * 100).toFixed(1);
-      pdf.text(`• ${sex === 'Males' ? 'Hombres' : 'Mujeres'}: ${(total / 1000000).toFixed(1)}M (${percentage}%)`, 25, 80 + (index * 10));
+      const totalSum = Object.values(genderLabor).reduce((sum: number, val: number) => sum + val, 0) as number;
+      const percentage = ((total as number / totalSum) * 100).toFixed(1);
+      pdf.text(`• ${sex === 'Males' ? 'Hombres' : 'Mujeres'}: ${((total as number) / 1000000).toFixed(1)}M (${percentage}%)`, 25, 80 + (index * 10));
     });
 
     // Age analysis
@@ -143,7 +143,7 @@ export const usePDFGeneration = () => {
         const label = age === 'Y_LT15' ? 'Menores de 15 años' : 
                      age === 'Y15-64' ? '15-64 años' : 
                      age === 'Y_GE65' ? '65+ años' : age;
-        pdf.text(`• ${label}: ${(total / 1000000).toFixed(1)}M`, 25, yPos);
+        pdf.text(`• ${label}: ${((total as number) / 1000000).toFixed(1)}M`, 25, yPos);
         yPos += 10;
       }
     });

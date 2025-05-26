@@ -8,25 +8,19 @@ import { useCSVData } from '@/hooks/useCSVData';
 import { 
   ComposableMap, 
   Geographies, 
-  Geography,
-  Marker
+  Geography
 } from "react-simple-maps";
 import { scaleLinear } from 'd3-scale';
 import { Tooltip as ReactTooltip } from 'react-tooltip';
 import { MapPin, Play, Pause, ChevronLeft, ChevronRight, TrendingUp, History } from 'lucide-react';
 
-// High-quality Europe GeoJSON map data - more detailed and realistic
+// High-quality Europe GeoJSON map data
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
 
 interface CountryData {
   geo: string;
-  latitude: number;
-  longitude: number;
-  labour_force: number;
-  predicted_labour_force?: number;
+  value: number;
   un_region: string;
-  population?: number;
-  fertility_rate?: number;
   isHistorical: boolean;
 }
 
@@ -89,7 +83,7 @@ export const RealisticEuropeMap = () => {
     return () => clearInterval(interval);
   }, [isPlaying, allYears]);
 
-  const getMarkersForYear = (year: number): CountryData[] => {
+  const getCountryDataForYear = (year: number): CountryData[] => {
     const isHistorical = year < transitionYear;
     
     if (isHistorical) {
@@ -110,13 +104,11 @@ export const RealisticEuropeMap = () => {
         const geoInfo = geoData.find(geo => geo.geo === country);
         return {
           geo: country,
-          latitude: geoInfo?.latitude || 0,
-          longitude: geoInfo?.longitude || 0,
-          labour_force: total,
+          value: total,
           un_region: geoInfo?.un_region || 'Unknown',
           isHistorical: true
         };
-      }).filter(marker => marker.latitude !== 0 && marker.longitude !== 0);
+      });
     } else {
       // Use prediction data (2025-2049)
       const yearData = filteredPredictionsData.filter(item => item.time_period === year);
@@ -124,33 +116,97 @@ export const RealisticEuropeMap = () => {
         const geoInfo = geoData.find(geo => geo.geo === prediction.geo);
         return {
           geo: prediction.geo,
-          latitude: geoInfo?.latitude || 0,
-          longitude: geoInfo?.longitude || 0,
-          labour_force: 0,
-          predicted_labour_force: prediction.predicted_labour_force,
+          value: prediction.predicted_labour_force,
           un_region: geoInfo?.un_region || 'Unknown',
           isHistorical: false
         };
-      }).filter(marker => marker.latitude !== 0 && marker.longitude !== 0);
+      });
     }
   };
 
-  const currentMarkers = getMarkersForYear(selectedYear);
+  const currentData = getCountryDataForYear(selectedYear);
   const isHistoricalView = selectedYear < transitionYear;
   
-  const values = currentMarkers.map(m => 
-    isHistoricalView ? m.labour_force : (m.predicted_labour_force || 0)
-  );
+  const values = currentData.map(d => d.value);
   const maxValue = Math.max(...values);
   const minValue = Math.min(...values);
 
-  // Scale for circle size based on labor force
-  const sizeScale = scaleLinear().domain([minValue, maxValue]).range([6, 20]);
-  
-  // Scale for circle color - more sophisticated Google Maps style
+  // Create color scale - darker colors for higher values, lighter for lower values
   const colorScale = scaleLinear<string>()
     .domain([minValue, maxValue])
-    .range(isHistoricalView ? ['#4285F4', '#1557B0'] : ['#34A853', '#0D8043']);
+    .range(isHistoricalView ? ['#dbeafe', '#1e3a8a'] : ['#dcfce7', '#14532d']); // Light to dark
+
+  // European countries mapping for better country name matching
+  const countryNameMapping: { [key: string]: string[] } = {
+    'Germany': ['Germany', 'Deutschland'],
+    'France': ['France', 'Francia'],
+    'Italy': ['Italy', 'Italia'],
+    'Spain': ['Spain', 'España'],
+    'Poland': ['Poland', 'Polonia'],
+    'Romania': ['Romania', 'Rumania'],
+    'Netherlands': ['Netherlands', 'Holland'],
+    'Belgium': ['Belgium', 'Bélgica'],
+    'Czechia': ['Czech Republic', 'Czechia'],
+    'Greece': ['Greece', 'Grecia'],
+    'Portugal': ['Portugal'],
+    'Sweden': ['Sweden', 'Suecia'],
+    'Hungary': ['Hungary', 'Hungría'],
+    'Austria': ['Austria'],
+    'Belarus': ['Belarus', 'Bielorrusia'],
+    'Switzerland': ['Switzerland', 'Suiza'],
+    'Bulgaria': ['Bulgaria'],
+    'Serbia': ['Serbia'],
+    'Denmark': ['Denmark', 'Dinamarca'],
+    'Finland': ['Finland', 'Finlandia'],
+    'Slovakia': ['Slovakia', 'Eslovaquia'],
+    'Norway': ['Norway', 'Noruega'],
+    'Ireland': ['Ireland', 'Irlanda'],
+    'Croatia': ['Croatia', 'Croacia'],
+    'Bosnia and Herzegovina': ['Bosnia and Herzegovina', 'Bosnia and Herz.'],
+    'Albania': ['Albania'],
+    'Lithuania': ['Lithuania', 'Lituania'],
+    'Slovenia': ['Slovenia', 'Eslovenia'],
+    'Latvia': ['Latvia', 'Letonia'],
+    'Estonia': ['Estonia'],
+    'North Macedonia': ['Macedonia', 'North Macedonia'],
+    'Moldova': ['Moldova'],
+    'Luxembourg': ['Luxembourg', 'Luxemburgo'],
+    'Malta': ['Malta'],
+    'Iceland': ['Iceland', 'Islandia'],
+    'Montenegro': ['Montenegro'],
+    'Cyprus': ['Cyprus', 'Chipre'],
+    'United Kingdom': ['United Kingdom', 'UK']
+  };
+
+  const getCountryColor = (geoProperties: any) => {
+    const geoName = geoProperties.NAME || geoProperties.name || '';
+    
+    // Find matching country data
+    let countryData = null;
+    
+    // First try direct match
+    countryData = currentData.find(d => d.geo === geoName);
+    
+    // If no direct match, try the mapping
+    if (!countryData) {
+      for (const [standardName, variants] of Object.entries(countryNameMapping)) {
+        if (variants.some(variant => 
+          variant.toLowerCase() === geoName.toLowerCase() ||
+          geoName.toLowerCase().includes(variant.toLowerCase()) ||
+          variant.toLowerCase().includes(geoName.toLowerCase())
+        )) {
+          countryData = currentData.find(d => d.geo === standardName);
+          break;
+        }
+      }
+    }
+    
+    if (!countryData || countryData.value === 0) {
+      return '#f3f4f6'; // Light gray for no data
+    }
+    
+    return colorScale(countryData.value);
+  };
 
   const handleYearChange = (direction: 'prev' | 'next') => {
     const currentIndex = allYears.indexOf(selectedYear);
@@ -161,23 +217,44 @@ export const RealisticEuropeMap = () => {
     }
   };
 
-  const handleMarkerHover = (marker: CountryData) => {
-    const value = isHistoricalView ? marker.labour_force : (marker.predicted_labour_force || 0);
-    const unit = isHistoricalView ? 'K' : 'M';
-    const label = isHistoricalView ? 'Fuerza Laboral' : 'Predicción';
+  const handleCountryHover = (geo: any) => {
+    const geoName = geo.properties.NAME || geo.properties.name || '';
     
-    setTooltipContent(
-      `${marker.geo}<br/>${label}: ${(value / (isHistoricalView ? 1 : 1)).toFixed(1)}${unit}<br/>Región: ${marker.un_region}<br/>Año: ${selectedYear}`
-    );
+    // Find country data using the same logic as getCountryColor
+    let countryData = currentData.find(d => d.geo === geoName);
+    
+    if (!countryData) {
+      for (const [standardName, variants] of Object.entries(countryNameMapping)) {
+        if (variants.some(variant => 
+          variant.toLowerCase() === geoName.toLowerCase() ||
+          geoName.toLowerCase().includes(variant.toLowerCase()) ||
+          variant.toLowerCase().includes(geoName.toLowerCase())
+        )) {
+          countryData = currentData.find(d => d.geo === standardName);
+          break;
+        }
+      }
+    }
+    
+    if (countryData) {
+      const unit = isHistoricalView ? 'K' : 'M';
+      const label = isHistoricalView ? 'Fuerza Laboral' : 'Predicción';
+      
+      setTooltipContent(
+        `${geoName}<br/>${label}: ${(countryData.value / (isHistoricalView ? 1000 : 1)).toFixed(1)}${unit}<br/>Región: ${countryData.un_region}<br/>Año: ${selectedYear}`
+      );
+    } else {
+      setTooltipContent(`${geoName}<br/>Sin datos para ${selectedYear}`);
+    }
   };
 
-  // European countries ISO codes for filtering
+  // European countries filter
   const europeanCountries = [
     'Albania', 'Andorra', 'Austria', 'Belarus', 'Belgium', 'Bosnia and Herzegovina',
-    'Bulgaria', 'Croatia', 'Cyprus', 'Czechia', 'Denmark', 'Estonia', 'Finland',
+    'Bulgaria', 'Croatia', 'Cyprus', 'Czechia', 'Czech Republic', 'Denmark', 'Estonia', 'Finland',
     'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy',
     'Kosovo', 'Latvia', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Malta',
-    'Moldova', 'Monaco', 'Montenegro', 'Netherlands', 'North Macedonia', 'Norway',
+    'Moldova', 'Monaco', 'Montenegro', 'Netherlands', 'North Macedonia', 'Macedonia', 'Norway',
     'Poland', 'Portugal', 'Romania', 'San Marino', 'Serbia', 'Slovakia',
     'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'Ukraine', 'United Kingdom'
   ];
@@ -200,7 +277,7 @@ export const RealisticEuropeMap = () => {
           Mapa de Europa - Fuerza Laboral
         </CardTitle>
         <CardDescription>
-          Visualización geográfica con datos históricos ({historicalYears.length > 0 ? `${Math.min(...historicalYears)}-${Math.max(...historicalYears)}` : 'No disponibles'}) y predicciones (2025-2049)
+          Visualización por color de países - tonos más oscuros indican mayor fuerza laboral
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -283,8 +360,8 @@ export const RealisticEuropeMap = () => {
           </div>
         </div>
 
-        {/* High-Quality Europe Map with Google Maps styling */}
-        <div className="relative bg-gradient-to-b from-slate-100 to-slate-200 rounded-lg h-[600px] overflow-hidden border shadow-lg">
+        {/* Europe Map with Country Coloring */}
+        <div className="relative bg-gradient-to-b from-slate-50 to-slate-100 rounded-lg h-[600px] overflow-hidden border shadow-lg">
           <ComposableMap
             projectionConfig={{ 
               scale: 800,
@@ -295,18 +372,12 @@ export const RealisticEuropeMap = () => {
             height={600}
             data-tooltip-id="europe-map-tooltip"
             className="w-full h-full"
-            style={{
-              filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.12))'
-            }}
           >
-            {/* Europe countries with Google Maps style */}
             <Geographies geography={geoUrl}>
               {({ geographies }) =>
                 geographies
                   .filter(geo => {
                     const countryName = geo.properties?.NAME || geo.properties?.name || '';
-                    if (!countryName) return false;
-                    
                     return europeanCountries.some(country => 
                       countryName.toLowerCase().includes(country.toLowerCase()) ||
                       country.toLowerCase().includes(countryName.toLowerCase())
@@ -316,18 +387,25 @@ export const RealisticEuropeMap = () => {
                     <Geography
                       key={geo.rsmKey}
                       geography={geo}
-                      fill="#F8F9FA"
-                      stroke="#E8EAED"
-                      strokeWidth={0.8}
+                      fill={getCountryColor(geo.properties)}
+                      stroke="#ffffff"
+                      strokeWidth={1}
+                      onMouseEnter={() => handleCountryHover(geo)}
+                      onMouseLeave={() => setTooltipContent("")}
+                      onClick={() => {
+                        const geoName = geo.properties.NAME || geo.properties.name || '';
+                        setSelectedCountry(selectedCountry === geoName ? null : geoName);
+                      }}
                       style={{
                         default: { 
                           outline: "none",
+                          transition: 'all 0.3s ease',
                           filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))'
                         },
                         hover: { 
-                          fill: "#F1F3F4", 
                           outline: "none",
-                          filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15))'
+                          filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)) brightness(1.1)',
+                          transform: 'scale(1.02)'
                         },
                         pressed: { outline: "none" },
                       }}
@@ -335,45 +413,6 @@ export const RealisticEuropeMap = () => {
                   ))
               }
             </Geographies>
-            
-            {/* Data markers with Google Maps style */}
-            {currentMarkers.map((marker, i) => {
-              const value = isHistoricalView ? marker.labour_force : (marker.predicted_labour_force || 0);
-              return (
-                <Marker 
-                  key={`marker-${i}`} 
-                  coordinates={[marker.longitude, marker.latitude]}
-                  onMouseEnter={() => handleMarkerHover(marker)}
-                  onMouseLeave={() => setTooltipContent("")}
-                  onClick={() => setSelectedCountry(
-                    selectedCountry === marker.geo ? null : marker.geo
-                  )}
-                >
-                  <circle
-                    r={sizeScale(value)}
-                    fill={colorScale(value)}
-                    opacity={0.85}
-                    stroke="#ffffff"
-                    strokeWidth={2.5}
-                    className="cursor-pointer hover:opacity-100 transition-all hover:scale-110"
-                    style={{
-                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))'
-                    }}
-                  />
-                  <text
-                    textAnchor="middle"
-                    y={sizeScale(value) + 18}
-                    className="text-xs font-semibold fill-gray-700 pointer-events-none"
-                    style={{ 
-                      fontSize: '11px',
-                      textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8)'
-                    }}
-                  >
-                    {marker.geo}
-                  </text>
-                </Marker>
-              );
-            })}
           </ComposableMap>
 
           <ReactTooltip 
@@ -386,27 +425,32 @@ export const RealisticEuropeMap = () => {
             }}
           />
 
-          {/* Google Maps style legend */}
-          <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 border border-gray-200">
+          {/* Enhanced Legend */}
+          <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-4 border border-gray-200">
             <div className="text-sm font-semibold mb-3 text-gray-800">
               {isHistoricalView ? 'Fuerza Laboral Histórica' : 'Predicciones de Fuerza Laboral'}
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs">
-                <div className={`w-4 h-4 rounded-full ${isHistoricalView ? 'bg-blue-400' : 'bg-green-400'}`}></div>
-                <span>Menor valor</span>
+                <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-100' : 'bg-green-100'}`}></div>
+                <span>Menor fuerza laboral</span>
               </div>
               <div className="flex items-center gap-2 text-xs">
-                <div className={`w-4 h-4 rounded-full ${isHistoricalView ? 'bg-blue-700' : 'bg-green-700'}`}></div>
-                <span>Mayor valor</span>
+                <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-400' : 'bg-green-400'}`}></div>
+                <span>Fuerza laboral media</span>
               </div>
-              <div className="text-xs text-gray-500 mt-2">
-                Tamaño = Magnitud del valor
+              <div className="flex items-center gap-2 text-xs">
+                <div className={`w-4 h-4 ${isHistoricalView ? 'bg-blue-700' : 'bg-green-700'}`}></div>
+                <span>Mayor fuerza laboral</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-4 h-4 bg-gray-200"></div>
+                <span>Sin datos</span>
               </div>
             </div>
           </div>
 
-          {/* Google Maps style title */}
+          {/* Map Title */}
           <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 shadow-md border border-gray-200">
             <div className="text-sm font-semibold text-gray-800">Europa - {selectedYear}</div>
             <div className="text-xs text-gray-600">
@@ -420,10 +464,30 @@ export const RealisticEuropeMap = () => {
           <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <h3 className="font-semibold text-lg mb-2 text-blue-900">{selectedCountry}</h3>
             {(() => {
-              const countryData = currentMarkers.find(m => m.geo === selectedCountry);
-              if (!countryData) return null;
+              // Find country data using the same logic
+              let countryData = currentData.find(d => d.geo === selectedCountry);
               
-              const value = isHistoricalView ? countryData.labour_force : (countryData.predicted_labour_force || 0);
+              if (!countryData) {
+                for (const [standardName, variants] of Object.entries(countryNameMapping)) {
+                  if (variants.some(variant => 
+                    variant.toLowerCase() === selectedCountry.toLowerCase() ||
+                    selectedCountry.toLowerCase().includes(variant.toLowerCase()) ||
+                    variant.toLowerCase().includes(selectedCountry.toLowerCase())
+                  )) {
+                    countryData = currentData.find(d => d.geo === standardName);
+                    break;
+                  }
+                }
+              }
+              
+              if (!countryData) {
+                return (
+                  <div className="text-sm text-red-600">
+                    Sin datos disponibles para este país en {selectedYear}
+                  </div>
+                );
+              }
+              
               const unit = isHistoricalView ? 'K' : 'M';
               const label = isHistoricalView ? 'Fuerza Laboral Histórica' : 'Fuerza Laboral Predicha';
               
@@ -432,7 +496,7 @@ export const RealisticEuropeMap = () => {
                   <div>
                     <span className="text-gray-600">{label}:</span>
                     <div className="font-semibold text-lg text-blue-700">
-                      {(value / (isHistoricalView ? 1 : 1)).toFixed(1)}{unit}
+                      {(countryData.value / (isHistoricalView ? 1000 : 1)).toFixed(1)}{unit}
                     </div>
                   </div>
                   <div>
@@ -460,7 +524,7 @@ export const RealisticEuropeMap = () => {
           <Card>
             <CardContent className="p-4">
               <div className="text-sm text-gray-600">Países</div>
-              <div className="text-2xl font-bold text-blue-600">{currentMarkers.length}</div>
+              <div className="text-2xl font-bold text-blue-600">{currentData.length}</div>
             </CardContent>
           </Card>
           <Card>
@@ -469,10 +533,7 @@ export const RealisticEuropeMap = () => {
                 Total {isHistoricalView ? 'Histórico' : 'Predicho'}
               </div>
               <div className="text-2xl font-bold text-green-600">
-                {currentMarkers.reduce((sum, m) => {
-                  const value = isHistoricalView ? m.labour_force : (m.predicted_labour_force || 0);
-                  return sum + value;
-                }, 0).toFixed(1)}{isHistoricalView ? 'K' : 'M'}
+                {(currentData.reduce((sum, d) => sum + d.value, 0) / (isHistoricalView ? 1000 : 1)).toFixed(1)}{isHistoricalView ? 'K' : 'M'}
               </div>
             </CardContent>
           </Card>
@@ -480,10 +541,10 @@ export const RealisticEuropeMap = () => {
             <CardContent className="p-4">
               <div className="text-sm text-gray-600">Promedio</div>
               <div className="text-2xl font-bold text-amber-600">
-                {(currentMarkers.reduce((sum, m) => {
-                  const value = isHistoricalView ? m.labour_force : (m.predicted_labour_force || 0);
-                  return sum + value;
-                }, 0) / currentMarkers.length).toFixed(1)}{isHistoricalView ? 'K' : 'M'}
+                {currentData.length > 0 ? 
+                  ((currentData.reduce((sum, d) => sum + d.value, 0) / currentData.length) / (isHistoricalView ? 1000 : 1)).toFixed(1) : 
+                  '0'
+                }{isHistoricalView ? 'K' : 'M'}
               </div>
             </CardContent>
           </Card>
