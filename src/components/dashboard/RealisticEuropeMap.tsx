@@ -304,7 +304,9 @@ export const RealisticEuropeMap = () => {
               {({ geographies }) =>
                 geographies
                   .filter(geo => {
-                    const countryName = geo.properties.NAME;
+                    const countryName = geo.properties?.NAME || geo.properties?.name || '';
+                    if (!countryName) return false;
+                    
                     return europeanCountries.some(country => 
                       countryName.toLowerCase().includes(country.toLowerCase()) ||
                       country.toLowerCase().includes(countryName.toLowerCase())
