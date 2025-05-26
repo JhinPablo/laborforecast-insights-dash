@@ -1,54 +1,15 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { useCSVData } from '@/hooks/useCSVData';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { TrendingUp, Users, Globe, Calendar } from 'lucide-react';
 
 export const SimpleReports = () => {
-  const [laborData, setLaborData] = useState([]);
-  const [populationData, setPopulationData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: laborData, loading: laborLoading } = useCSVData('labor.csv');
+  const { data: populationData, loading: populationLoading } = useCSVData('population.csv');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      console.log('Fetching data for simple reports...');
-
-      // Fetch labor data
-      const { data: labor, error: laborError } = await supabase
-        .from('labor')
-        .select('*')
-        .order('year');
-
-      if (laborError) {
-        console.error('Labor data error:', laborError);
-      }
-
-      // Fetch population data
-      const { data: population, error: populationError } = await supabase
-        .from('population')
-        .select('*')
-        .order('year');
-
-      if (populationError) {
-        console.error('Population data error:', populationError);
-      }
-
-      console.log('Labor records:', labor?.length || 0);
-      console.log('Population records:', population?.length || 0);
-
-      setLaborData(labor || []);
-      setPopulationData(population || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = laborLoading || populationLoading;
 
   if (loading) {
     return (
@@ -57,6 +18,9 @@ export const SimpleReports = () => {
       </div>
     );
   }
+
+  console.log('Labor data:', laborData.length);
+  console.log('Population data:', populationData.length);
 
   // Process data for distribution by countries
   const getCountryDistribution = () => {
