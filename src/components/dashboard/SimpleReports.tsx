@@ -35,6 +35,10 @@ export const SimpleReports = () => {
   console.log('Sample labor data:', laborData[0]);
   console.log('Sample population data:', populationData[0]);
 
+  // Log unique age values to debug
+  const uniqueAges = [...new Set(populationData.map((item: any) => item.age))];
+  console.log('Unique age values in population data:', uniqueAges);
+
   // Process data for distribution by countries (using labor data)
   const getCountryDistribution = () => {
     const countryData = laborData.reduce((acc: any, item: any) => {
@@ -116,7 +120,7 @@ export const SimpleReports = () => {
     })).filter(item => item.sex !== 'Total');
   };
 
-  // Age distribution from population data - UPDATED to exclude unknown/total and order properly
+  // Age distribution from population data - FIXED to use real age values from data
   const getAgeDistribution = () => {
     const ageData = populationData.reduce((acc: any, item: any) => {
       const age = item.age;
@@ -127,19 +131,37 @@ export const SimpleReports = () => {
       return acc;
     }, {});
 
-    // Define valid age groups in the correct order, excluding TOTAL and Unknown
-    const validAgeGroups = [
-      'Y_LT15',      // <15 años (first)
-      'Y15-64',      // 15-64 años  
-      'Y_GE65'       // 65+ años
-    ];
+    // Get all age groups that have data, excluding Total and Unknown
+    const excludeTerms = ['Total', 'total', 'Unknown', 'unknown', 'TOTAL', 'UNKNOWN'];
+    const validAgeGroups = Object.keys(ageData)
+      .filter(age => {
+        const hasData = Number(ageData[age]) > 0;
+        const isNotExcluded = !excludeTerms.some(term => age.includes(term));
+        return hasData && isNotExcluded;
+      })
+      .sort((a, b) => {
+        // Custom sort to put younger ages first
+        const getValue = (ageStr: string) => {
+          if (ageStr.includes('Less than 5') || ageStr.includes('Y_LT5')) return 0;
+          if (ageStr.includes('From 5 to 9') || ageStr.includes('Y5-9')) return 1;
+          if (ageStr.includes('From 10 to 14') || ageStr.includes('Y10-14')) return 2;
+          if (ageStr.includes('Y_LT15')) return 3;
+          if (ageStr.includes('Y15-64')) return 4;
+          if (ageStr.includes('Y_GE65')) return 5;
+          if (ageStr.includes('85 years or over')) return 100;
+          // Extract first number for other age ranges
+          const match = ageStr.match(/(\d+)/);
+          return match ? parseInt(match[1]) : 999;
+        };
+        return getValue(a) - getValue(b);
+      });
 
-    return validAgeGroups
-      .filter(age => ageData[age] && Number(ageData[age]) > 0) // Only include ages with data
-      .map(age => ({
-        age,
-        population: (Number(ageData[age]) / 1000000).toFixed(1) // in millions
-      }));
+    console.log('Valid age groups found:', validAgeGroups);
+
+    return validAgeGroups.map(age => ({
+      age,
+      population: (Number(ageData[age]) / 1000000).toFixed(1) // in millions
+    }));
   };
 
   // Gender distribution from population data
@@ -171,6 +193,34 @@ export const SimpleReports = () => {
     if (sex === 'Hombres') return '#3B82F6'; // Blue for men
     if (sex === 'Mujeres') return '#EC4899'; // Pink for women
     return '#6B7280'; // Gray fallback
+  };
+
+  // Helper function to get readable age labels
+  const getAgeLabel = (age: string) => {
+    const labels: {[key: string]: string} = {
+      'Y_LT15': '<15 años',
+      'Y15-64': '15-64 años',
+      'Y_GE65': '65+ años',
+      'Less than 5 years': '<5 años',
+      'From 5 to 9 years': '5-9 años',
+      'From 10 to 14 years': '10-14 años',
+      'From 15 to 19 years': '15-19 años',
+      'From 20 to 24 years': '20-24 años',
+      'From 25 to 29 years': '25-29 años',
+      'From 30 to 34 years': '30-34 años',
+      'From 35 to 39 years': '35-39 años',
+      'From 40 to 44 years': '40-44 años',
+      'From 45 to 49 years': '45-49 años',
+      'From 50 to 54 years': '50-54 años',
+      'From 55 to 59 years': '55-59 años',
+      'From 60 to 64 years': '60-64 años',
+      'From 65 to 69 years': '65-69 años',
+      'From 70 to 74 years': '70-74 años',
+      'From 75 to 79 years': '75-79 años',
+      'From 80 to 84 years': '80-84 años',
+      '85 years or over': '85+ años'
+    };
+    return labels[age] || age;
   };
 
   // Calculate key statistics
@@ -313,42 +363,37 @@ export const SimpleReports = () => {
           </CardContent>
         </Card>
 
-        {/* Age Distribution - UPDATED */}
+        {/* Age Distribution - FIXED */}
         <Card>
           <CardHeader>
             <CardTitle>Distribución por Edad</CardTitle>
-            <CardDescription>Población por grupos etarios principales (millones)</CardDescription>
+            <CardDescription>Población por grupos etarios (millones) - {ageDistribution.length} grupos</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={ageDistribution}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="age" 
-                  tickFormatter={(value) => {
-                    const labels: {[key: string]: string} = {
-                      'Y_LT15': '<15 años',
-                      'Y15-64': '15-64 años',
-                      'Y_GE65': '65+ años'
-                    };
-                    return labels[value] || value;
-                  }}
-                />
-                <YAxis />
-                <Tooltip 
-                  labelFormatter={(value) => {
-                    const labels: {[key: string]: string} = {
-                      'Y_LT15': 'Menores de 15 años',
-                      'Y15-64': '15 a 64 años',
-                      'Y_GE65': '65 años o más'
-                    };
-                    return labels[value] || value;
-                  }}
-                  formatter={(value) => [`${value}M`, 'Población']}
-                />
-                <Bar dataKey="population" fill="#F59E0B" />
-              </BarChart>
-            </ResponsiveContainer>
+            {ageDistribution.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={ageDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="age" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    tickFormatter={(value) => getAgeLabel(value)}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    labelFormatter={(value) => getAgeLabel(value)}
+                    formatter={(value) => [`${value}M`, 'Población']}
+                  />
+                  <Bar dataKey="population" fill="#F59E0B" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-40">
+                <p className="text-gray-500">No hay datos de distribución por edad disponibles</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
