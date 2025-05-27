@@ -56,7 +56,7 @@ export const SimpleReports = () => {
       .slice(0, 10);
   };
 
-  // Process data for population vs labor comparison
+  // Process data for population vs labor comparison - FIXED to show all available years
   const getPopulationLaborComparison = () => {
     const yearData = laborData.reduce((acc: any, item: any) => {
       const year = item.year;
@@ -78,7 +78,7 @@ export const SimpleReports = () => {
       return acc;
     }, {});
 
-    return Object.keys(yearData)
+    const result = Object.keys(yearData)
       .map(year => {
         const laborInfo = yearData[year];
         const popInfo = populationByYear[year] || { population: 0, popCount: 1 };
@@ -91,8 +91,11 @@ export const SimpleReports = () => {
         };
       })
       .filter(item => Number(item.avgPopulation) > 0)
-      .sort((a, b) => a.year - b.year)
-      .slice(0, 15); // Last 15 years with data
+      .sort((a, b) => a.year - b.year); // Show ALL years, not just 15
+
+    console.log('Population vs Labor data years:', result.map(r => r.year));
+    console.log('Population vs Labor data length:', result.length);
+    return result;
   };
 
   // Gender distribution data from labor
@@ -350,20 +353,35 @@ export const SimpleReports = () => {
         </Card>
       </div>
 
-      {/* Population vs Labor Comparison */}
+      {/* Population vs Labor Comparison - UPDATED to show all years */}
       {populationLaborData.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Población vs Fuerza Laboral</CardTitle>
-            <CardDescription>Comparación temporal (promedios por año)</CardDescription>
+            <CardDescription>
+              Comparación temporal (promedios por año) - {populationLaborData[0]?.year} a {populationLaborData[populationLaborData.length - 1]?.year}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={400}>
               <AreaChart data={populationLaborData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
+                <XAxis 
+                  dataKey="year" 
+                  type="number"
+                  domain={['dataMin', 'dataMax']}
+                  tickFormatter={(value) => value.toString()}
+                />
                 <YAxis />
-                <Tooltip />
+                <Tooltip 
+                  labelFormatter={(value) => `Año ${value}`}
+                  formatter={(value, name) => {
+                    if (name === 'Población Promedio (M)') {
+                      return [`${value}M`, name];
+                    }
+                    return [`${value}K`, name];
+                  }}
+                />
                 <Legend />
                 <Area 
                   type="monotone" 
