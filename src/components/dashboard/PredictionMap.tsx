@@ -70,7 +70,7 @@ export const PredictionMap = () => {
     );
   }
 
-  // Get regional analysis with proper data processing
+  // FIXED: Get regional analysis with proper data processing
   const getRegionalAnalysis = () => {
     if (!predictionsData?.length || !geoData?.length) return [];
 
@@ -102,16 +102,16 @@ export const PredictionMap = () => {
 
     const result = Object.values(groupedByRegion).map((item: any) => ({
       region: item.region,
-      average: parseFloat((item.total / item.count).toFixed(1)),
+      average: parseFloat((item.total / item.count / 1000000).toFixed(1)), // Convert to millions for display
       total: parseFloat((item.total / 1000000).toFixed(1)), // Convert to millions
       countries: item.countries.size
     })).filter(item => item.region !== 'Unknown');
 
-    console.log('Regional analysis:', result);
+    console.log('Regional analysis fixed:', result);
     return result;
   };
 
-  // Get yearly trends with proper data processing
+  // FIXED: Get yearly trends with proper data processing
   const getYearlyTrends = () => {
     if (!predictionsData?.length) return [];
 
@@ -130,15 +130,19 @@ export const PredictionMap = () => {
       
       const average = yearData.length > 0 ? total / yearData.length : 0;
       
+      console.log(`Year ${year}: total=${total}, average=${average}, countries=${yearData.length}`);
+      
       return {
         year,
         total: parseFloat((total / 1000000).toFixed(1)), // Convert to millions
         average: parseFloat((average / 1000000).toFixed(1)), // Convert to millions
-        countries: yearData.length
+        countries: yearData.length,
+        totalRaw: total, // Keep raw total for debugging
+        averageRaw: average // Keep raw average for debugging
       };
     }).filter(item => item.countries > 0);
 
-    console.log('Yearly trends:', yearlyData);
+    console.log('Yearly trends fixed:', yearlyData);
     return yearlyData;
   };
 
@@ -154,7 +158,7 @@ export const PredictionMap = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Globe className="h-5 w-5" />
-            Análisis de Predicciones de Fuerza Laboral ({years[0]}-{years[years.length-1]})
+            Análisis Regional y Tendencias Temporales ({years[0]}-{years[years.length-1]})
           </CardTitle>
           <CardDescription>
             Análisis regional y tendencias temporales de predicciones laborales
