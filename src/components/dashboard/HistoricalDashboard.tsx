@@ -111,7 +111,7 @@ export const HistoricalDashboard = () => {
     })).filter(item => item.sex !== 'Total');
   };
 
-  // Age distribution from population data - FIXED to use actual age values
+  // Age distribution from population data - UPDATED to exclude unknown/total and order properly
   const getAgeDistribution = () => {
     console.log('Processing age distribution...');
     console.log('Sample population data:', populationData.slice(0, 5));
@@ -127,9 +127,9 @@ export const HistoricalDashboard = () => {
 
     console.log('Age data aggregated:', Object.keys(ageData));
 
-    // Define valid age groups using the actual values from the data, excluding TOTAL and Unknown
+    // Define valid age groups in the correct order, excluding TOTAL and Unknown
     const validAgeGroups = [
-      'Less than 5 years',        // <5 años (should be first)
+      'Less than 5 years',        // <5 años (first)
       'From 5 to 9 years',        // 5-9 años
       'From 10 to 14 years',      // 10-14 años
       'From 15 to 19 years',      // 15-19 años
@@ -146,9 +146,7 @@ export const HistoricalDashboard = () => {
       'From 70 to 74 years',      // 70-74 años
       'From 75 to 79 years',      // 75-79 años
       'From 80 to 84 years',      // 80-84 años
-      '85 years or over',         // 85+ años
-      '80 years or over',         // 80+ años
-      '75 years or over'          // 75+ años
+      '85 years or over'          // 85+ años
     ];
     
     const result = validAgeGroups
@@ -185,9 +183,7 @@ export const HistoricalDashboard = () => {
       'From 70 to 74 years': '70-74 años',
       'From 75 to 79 years': '75-79 años',
       'From 80 to 84 years': '80-84 años',
-      '85 years or over': '85+ años',
-      '80 years or over': '80+ años',
-      '75 years or over': '75+ años'
+      '85 years or over': '85+ años'
     };
     return labels[age] || age;
   };
@@ -365,7 +361,7 @@ export const HistoricalDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Age Distribution - FIXED */}
+        {/* Age Distribution - UPDATED */}
         <Card>
           <CardHeader>
             <CardTitle>Distribución por Edad</CardTitle>

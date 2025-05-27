@@ -116,7 +116,7 @@ export const SimpleReports = () => {
     })).filter(item => item.sex !== 'Total');
   };
 
-  // Age distribution from population data
+  // Age distribution from population data - UPDATED to exclude unknown/total and order properly
   const getAgeDistribution = () => {
     const ageData = populationData.reduce((acc: any, item: any) => {
       const age = item.age;
@@ -127,17 +127,19 @@ export const SimpleReports = () => {
       return acc;
     }, {});
 
-    return Object.entries(ageData)
-      .map(([age, total]: any) => ({
+    // Define valid age groups in the correct order, excluding TOTAL and Unknown
+    const validAgeGroups = [
+      'Y_LT15',      // <15 años (first)
+      'Y15-64',      // 15-64 años  
+      'Y_GE65'       // 65+ años
+    ];
+
+    return validAgeGroups
+      .filter(age => ageData[age] && Number(ageData[age]) > 0) // Only include ages with data
+      .map(age => ({
         age,
-        population: (Number(total) / 1000000).toFixed(1) // in millions
-      }))
-      .sort((a: any, b: any) => {
-        // Sort age groups logically
-        const ageOrder = ['Y_LT15', 'Y15-64', 'Y_GE65', 'TOTAL'];
-        return ageOrder.indexOf(a.age) - ageOrder.indexOf(b.age);
-      })
-      .filter(item => item.age !== 'TOTAL');
+        population: (Number(ageData[age]) / 1000000).toFixed(1) // in millions
+      }));
   };
 
   // Gender distribution from population data
@@ -311,11 +313,11 @@ export const SimpleReports = () => {
           </CardContent>
         </Card>
 
-        {/* Age Distribution */}
+        {/* Age Distribution - UPDATED */}
         <Card>
           <CardHeader>
             <CardTitle>Distribución por Edad</CardTitle>
-            <CardDescription>Población por grupos etarios (millones)</CardDescription>
+            <CardDescription>Población por grupos etarios principales (millones)</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -327,8 +329,7 @@ export const SimpleReports = () => {
                     const labels: {[key: string]: string} = {
                       'Y_LT15': '<15 años',
                       'Y15-64': '15-64 años',
-                      'Y_GE65': '65+ años',
-                      'Total': 'Total'
+                      'Y_GE65': '65+ años'
                     };
                     return labels[value] || value;
                   }}
@@ -339,8 +340,7 @@ export const SimpleReports = () => {
                     const labels: {[key: string]: string} = {
                       'Y_LT15': 'Menores de 15 años',
                       'Y15-64': '15 a 64 años',
-                      'Y_GE65': '65 años o más',
-                      'Total': 'Total'
+                      'Y_GE65': '65 años o más'
                     };
                     return labels[value] || value;
                   }}
