@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCSVData } from '@/hooks/useCSVData';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from 'recharts';
-import { Globe, Play, Pause, SkipForward, SkipBack, TrendingUp } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { Globe, Play, Pause, SkipForward, SkipBack } from 'lucide-react';
 
 export const PredictionMap = () => {
   const { data: predictionsData, loading: predictionsLoading } = useCSVData('predictions.csv');
@@ -70,24 +70,25 @@ export const PredictionMap = () => {
     );
   }
 
-  // FIXED: Get regional analysis with proper data processing
+  // Get regional analysis for selected year
   const getRegionalAnalysis = () => {
     if (!predictionsData?.length || !geoData?.length) return [];
 
-    const merged = predictionsData
-      .filter(item => {
-        const laborForce = parseFloat(String(item.predicted_labour_force));
-        return !isNaN(laborForce) && laborForce > 0 && item.geo;
-      })
-      .map(pred => {
-        const geo = geoData.find(g => g.geo === pred.geo);
-        const laborForce = parseFloat(String(pred.predicted_labour_force));
-        return {
-          geo: String(pred.geo),
-          predicted_labour_force: laborForce,
-          un_region: geo?.un_region || 'Unknown'
-        };
-      });
+    const yearData = predictionsData.filter(item => {
+      const itemYear = Number(item.time_period);
+      const laborForce = parseFloat(String(item.predicted_labour_force));
+      return itemYear === selectedYear && !isNaN(laborForce) && laborForce > 0 && item.geo;
+    });
+
+    const merged = yearData.map(pred => {
+      const geo = geoData.find(g => g.geo === pred.geo);
+      const laborForce = parseFloat(String(pred.predicted_labour_force));
+      return {
+        geo: String(pred.geo),
+        predicted_labour_force: laborForce,
+        un_region: geo?.un_region || 'Unknown'
+      };
+    });
 
     const groupedByRegion = merged.reduce((acc: any, item) => {
       const region = item.un_region;
@@ -107,50 +108,13 @@ export const PredictionMap = () => {
       countries: item.countries.size
     })).filter(item => item.region !== 'Unknown');
 
-    console.log('Regional analysis fixed:', result);
+    console.log('Regional analysis for year', selectedYear, ':', result);
     return result;
   };
 
-  // FIXED: Get yearly trends with proper data processing
-  const getYearlyTrends = () => {
-    if (!predictionsData?.length) return [];
-
-    const yearlyData = years.map(year => {
-      const yearData = predictionsData
-        .filter(item => {
-          const itemYear = Number(item.time_period);
-          const laborForce = parseFloat(String(item.predicted_labour_force));
-          return itemYear === year && !isNaN(laborForce) && laborForce > 0;
-        });
-      
-      const total = yearData.reduce((sum, item) => {
-        const laborForce = parseFloat(String(item.predicted_labour_force));
-        return sum + laborForce;
-      }, 0);
-      
-      const average = yearData.length > 0 ? total / yearData.length : 0;
-      
-      console.log(`Year ${year}: total=${total}, average=${average}, countries=${yearData.length}`);
-      
-      return {
-        year,
-        total: parseFloat((total / 1000000).toFixed(1)), // Convert to millions
-        average: parseFloat((average / 1000000).toFixed(1)), // Convert to millions
-        countries: yearData.length,
-        totalRaw: total, // Keep raw total for debugging
-        averageRaw: average // Keep raw average for debugging
-      };
-    }).filter(item => item.countries > 0);
-
-    console.log('Yearly trends fixed:', yearlyData);
-    return yearlyData;
-  };
-
   const regionalAnalysis = getRegionalAnalysis();
-  const yearlyTrends = getYearlyTrends();
 
   console.log('Regional analysis length:', regionalAnalysis.length);
-  console.log('Yearly trends length:', yearlyTrends.length);
 
   return (
     <div className="space-y-6">
@@ -158,10 +122,10 @@ export const PredictionMap = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Globe className="h-5 w-5" />
-            Análisis Regional y Tendencias Temporales ({years[0]}-{years[years.length-1]})
+            Análisis Regional ({selectedYear})
           </CardTitle>
           <CardDescription>
-            Análisis regional y tendencias temporales de predicciones laborales
+            Análisis regional de predicciones laborales por año seleccionado
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -227,89 +191,38 @@ export const PredictionMap = () => {
         </CardContent>
       </Card>
 
-      {/* Analysis Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Yearly Trends */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tendencias por Año</CardTitle>
-            <CardDescription>Evolución total y promedio de la fuerza laboral (en millones)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {yearlyTrends.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={yearlyTrends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="year" />
-                  <YAxis tickFormatter={(value) => `${value}M`} />
-                  <Tooltip 
-                    formatter={(value, name) => [
-                      `${value}M`,
-                      name === 'average' ? 'Promedio por País' : 'Total Regional'
-                    ]}
-                  />
-                  <Legend />
-                  <Area 
-                    type="monotone" 
-                    dataKey="total" 
-                    stackId="1" 
-                    stroke="#3B82F6" 
-                    fill="#3B82F6" 
-                    fillOpacity={0.6}
-                    name="Total Regional"
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="average" 
-                    stackId="2" 
-                    stroke="#10B981" 
-                    fill="#10B981" 
-                    fillOpacity={0.8}
-                    name="Promedio por País"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-40">
-                <p className="text-gray-500">No hay datos de tendencias anuales disponibles</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Regional Analysis */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Análisis Regional</CardTitle>
-            <CardDescription>Distribución promedio por regiones (en millones)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {regionalAnalysis.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={regionalAnalysis}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="region" 
-                    angle={-45} 
-                    textAnchor="end" 
-                    height={80}
-                    fontSize={10}
-                  />
-                  <YAxis tickFormatter={(value) => `${value}M`} />
-                  <Tooltip 
-                    formatter={(value) => [`${value}M`, 'Promedio Regional']}
-                  />
-                  <Bar dataKey="average" fill="#8B5CF6" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-40">
-                <p className="text-gray-500">No hay datos regionales disponibles</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Regional Analysis Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Análisis Regional - {selectedYear}</CardTitle>
+          <CardDescription>Distribución promedio por regiones (en millones)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {regionalAnalysis.length > 0 ? (
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={regionalAnalysis}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="region" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={80}
+                  fontSize={10}
+                />
+                <YAxis tickFormatter={(value) => `${value}M`} />
+                <Tooltip 
+                  formatter={(value) => [`${value}M`, 'Promedio Regional']}
+                />
+                <Bar dataKey="average" fill="#8B5CF6" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-40">
+              <p className="text-gray-500">No hay datos regionales disponibles para {selectedYear}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Summary Statistics */}
       <div className="grid md:grid-cols-4 gap-4">
@@ -321,7 +234,7 @@ export const PredictionMap = () => {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-sm text-gray-600">Años Predichos</div>
+            <div className="text-sm text-gray-600">Años Disponibles</div>
             <div className="text-2xl font-bold">{years.length}</div>
           </CardContent>
         </Card>
@@ -333,8 +246,8 @@ export const PredictionMap = () => {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-sm text-gray-600">Registros Totales</div>
-            <div className="text-2xl font-bold">{predictionsData.length.toLocaleString()}</div>
+            <div className="text-sm text-gray-600">Año Actual</div>
+            <div className="text-2xl font-bold">{selectedYear}</div>
           </CardContent>
         </Card>
       </div>
