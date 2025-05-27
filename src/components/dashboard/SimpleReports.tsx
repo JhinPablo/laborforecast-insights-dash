@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCSVData } from '@/hooks/useCSVData';
@@ -39,6 +38,31 @@ export const SimpleReports = () => {
   // Log unique age values to debug
   const uniqueAges = [...new Set(populationData.map((item: any) => item.age))];
   console.log('Unique age values in population data:', uniqueAges);
+
+  // Helper function to get readable age labels - MOVED BEFORE getAgeDistribution
+  const getAgeLabel = (age: string) => {
+    const labels: {[key: string]: string} = {
+      'Less than 5 years': '<5',
+      'From 5 to 9 years': '5-9',
+      'From 10 to 14 years': '10-14',
+      'From 15 to 19 years': '15-19',
+      'From 20 to 24 years': '20-24',
+      'From 25 to 29 years': '25-29',
+      'From 30 to 34 years': '30-34',
+      'From 35 to 39 years': '35-39',
+      'From 40 to 44 years': '40-44',
+      'From 45 to 49 years': '45-49',
+      'From 50 to 54 years': '50-54',
+      'From 55 to 59 years': '55-59',
+      'From 60 to 64 years': '60-64',
+      'From 65 to 69 years': '65-69',
+      'From 70 to 74 years': '70-74',
+      'From 75 to 79 years': '75-79',
+      'From 80 to 84 years': '80-84',
+      '85 years or over': '85+'
+    };
+    return labels[age] || age;
+  };
 
   // Process data for distribution by countries (using labor data)
   const getCountryDistribution = () => {
@@ -210,31 +234,6 @@ export const SimpleReports = () => {
     if (sex === 'Hombres') return '#3B82F6'; // Blue for men
     if (sex === 'Mujeres') return '#EC4899'; // Pink for women
     return '#6B7280'; // Gray fallback
-  };
-
-  // Helper function to get readable age labels
-  const getAgeLabel = (age: string) => {
-    const labels: {[key: string]: string} = {
-      'Less than 5 years': '<5',
-      'From 5 to 9 years': '5-9',
-      'From 10 to 14 years': '10-14',
-      'From 15 to 19 years': '15-19',
-      'From 20 to 24 years': '20-24',
-      'From 25 to 29 years': '25-29',
-      'From 30 to 34 years': '30-34',
-      'From 35 to 39 years': '35-39',
-      'From 40 to 44 years': '40-44',
-      'From 45 to 49 years': '45-49',
-      'From 50 to 54 years': '50-54',
-      'From 55 to 59 years': '55-59',
-      'From 60 to 64 years': '60-64',
-      'From 65 to 69 years': '65-69',
-      'From 70 to 74 years': '70-74',
-      'From 75 to 79 years': '75-79',
-      'From 80 to 84 years': '80-84',
-      '85 years or over': '85+'
-    };
-    return labels[age] || age;
   };
 
   // Calculate key statistics
