@@ -64,7 +64,7 @@ La aplicación está construida como una SPA con React y TypeScript. Utiliza:
 | `AuthPage`      | Formularios de login |
 | `Dashboard.tsx` | Lógica principal     |
 
-![Arquitectura de componentes](docs/img/architecture-components.png)
+![Arquitectura de componentes](src/docs/img/architecture-components.png)
 
 ## 🧭 Jerarquía de Componentes y Navegación
 
@@ -76,7 +76,7 @@ La navegación se gestiona a través del estado `activeSection` en `Dashboard.ts
 
 Incluye protecciones de autenticación mediante los hooks `useAuth()` y `useProfile()`.
 
-![Flujo de navegación y autenticación](docs/img/navigation-auth-flow.png)
+![Flujo de navegación y autenticación](src/docs/img/navigation-auth-flow.png)
 
 ## 🧰 Tecnologías Utilizadas
 
@@ -99,7 +99,7 @@ Incluye protecciones de autenticación mediante los hooks `useAuth()` y `useProf
 * **Tabla Supabase**: `labor`
 * **Hooks de procesamiento**: `useCSVData`, `processRegionalData`, `processTimeSeriesData`, etc.
 
-![Flujo de datos y visualización](docs/img/data-processing-pipeline.png)
+![Flujo de datos y visualización](src/docs/img/data-processing-pipeline.png)
 
 ## 🔐 Gestión de Usuarios y Autenticación
 
@@ -117,7 +117,7 @@ Implementa acceso por niveles:
 * `useAuth`: Sesión
 * `useProfile`: Nivel de acceso
 
-![Autenticación y control de acceso](docs/img/authentication-flow.png)
+![Autenticación y control de acceso](src/docs/img/authentication-flow.png)
 
 ## 🧭 Secciones del Dashboard
 
